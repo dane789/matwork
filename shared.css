@@ -12,3 +12,9 @@
 .privacy-note{font-size:12px}
 .shared-footer{font-size:11px}
 
+.practice-intro{margin:4px 0 12px}
+.practice-progress{display:flex;align-items:center;gap:12px;margin:0 0 12px;font-size:12px;font-weight:650;color:var(--forest)}
+.practice-progress-track{width:112px;height:7px;border-radius:99px;background:#eaf0e9;overflow:hidden}
+.practice-progress-track span{display:block;width:0;height:100%;border-radius:99px;background:var(--green);transition:width .2s ease}
+.practice-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--green);cursor:pointer}
+
