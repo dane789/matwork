@@ -12,17 +12,18 @@ This document defines the product behavior for a shared wrestler, parent, and co
 - A parent/wrestler check-in loop is prepared in the shared workspace source. Parents choose family-only, coach-only, or wrestler-and-coach visibility; wrestlers choose private-to-self/family or share with coach. Coaches see only explicitly shared entries, labeled by the author's perspective. Migration `005_reflection_sharing.sql` is required before this feature is active; the page hides the new form and keeps existing views usable until applied.
 - The authenticated `coach-session-draft` Edge Function is deployed with CORS preflight support for GitHub Pages and the local preview. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret is configured in Supabase. During the signed-in Jared pilot, the function reached OpenAI but received `429 credit_balance_exhausted`; the captured note was not saved. Add API credits before retrying.
 - AI is optional: the coach can write structured notes or use free device keyboard dictation without an API call. The updated function source sends only the current note, has no automatic retry, caps output at 1,600 tokens, and enforces a monthly project allowance (100 drafts) plus a per-coach allowance (20 drafts). Coaches do not see or manage API costs. These limits become active after migration `004_ai_usage_limits.sql` is applied and the function is redeployed. A lower-cost nano model can be considered after a coach checks its accuracy on an approved sample.
+- Parent-led planning is now supported in source: Coach notes and Parent observations stay separated; the parent reviews the AI draft and chooses any parent recommendations. The parent chooses per plan whether to share the recap and checklist progress with the assigned coach. Migration `006_parent_ai_drafts.sql` is applied and its save function is present. Deploy the matching Edge Function before using parent AI drafting.
 
 ## Remaining pilot work
 
-The owner currently has parent and pilot-coach views in one signed-in account. AI drafting is waiting for OpenAI API credits; the lesson text remains unsaved in the capture form. Apply migrations `004_ai_usage_limits.sql` and `005_reflection_sharing.sql`, then redeploy the Edge Function before enabling AI again. Until then, use manual lesson entry; adding API credits alone is not sufficient to activate the new safeguards.
+The owner currently has parent and pilot-coach views in one signed-in account. AI drafting previously reached OpenAI but was blocked by exhausted API credits; no automatic retry is made. Migrations `004_ai_usage_limits.sql`, `005_reflection_sharing.sql`, and `006_parent_ai_drafts.sql` are applied. The current Edge Function source must be redeployed before parent AI drafting can be used. Until then, use manual lesson entry; no new AI request has been made.
 
-1. Apply migration `004_ai_usage_limits.sql` and redeploy the updated Edge Function before any future AI attempt. Add API credits only if the family chooses to do so; no API retry should happen automatically. If credits are added later, keep the note labeled as parent-entered pilot data until the actual coach confirms it.
+1. Redeploy the updated `coach-session-draft` Edge Function before any future AI attempt. Add API credits only if the family chooses to do so; no API retry should happen automatically. If credits are added later, keep parent-entered pilot notes labeled as parent notes until the actual coach confirms them.
 2. Preserve exact coach cues separately from parent interpretation and suggested practice. Keep surnames, birthdays, and other identifying details out of public source and shared lesson notes.
 3. Verify parent, wrestler, and coach views with separate accounts where possible.
 4. Build and verify training logs and milestones after the role boundaries are confirmed.
 5. Configure custom SMTP before inviting more families or relying on frequent email sign-ins.
-6. Apply migration `005_reflection_sharing.sql`, then verify parent and wrestler check-ins appear to coaches only when intentionally shared.
+6. Verify parent and wrestler check-ins appear to coaches only when intentionally shared, and confirm parent-generated checklist progress stays hidden from the coach when sharing is off.
 
 ## Role access
 
@@ -77,7 +78,7 @@ Optional fields can capture a date, one coach-assigned task, or next-lesson foll
 
 ### AI draft for review
 
-This step remains gated until the administrator configures the `OPENAI_API_KEY` server-side secret. Only the authenticated Edge Function may send the coach note; the browser must never hold the AI key.
+The parent can initiate an AI draft using Coach notes they captured and/or their own observations. Keep those inputs separately labeled. The parent reviews the recap and possible athlete steps before saving or sharing. Parent-generated steps remain **Parent recommendations**; they never become coach assignments automatically. The coach can contribute their own record or follow up with coach-authored assignments. Only the authenticated Edge Function may send notes; the browser must never hold the AI key.
 
 After submission, AI formats the note into a structured draft with these sections:
 
@@ -107,6 +108,7 @@ Keep the original coach note with the approved lesson record so the formatted ve
 - Keep parent-reported summaries distinct from coach-submitted instruction. If source notes include separate partner or other-athlete observations, exclude them from this wrestler's individual plan.
 - Never invent a technique, coaching phrase, strength, weakness, result, assignment, or progress claim. If the note does not say, mark it as not provided.
 - Label each checklist item as coach-assigned or as an AI suggestion approved by the coach. Store the AI origin and coach approval separately so AI-generated wording is not misrepresented as a direct coach statement.
+- Parent-initiated AI steps, once selected by the parent, are stored as parent recommendations. The parent chooses whether the assigned coach can see those items and their Athlete check-ins. Coach assignments remain coach-authored.
 - Parents can see the approved lesson and parent-support section. Wrestlers see their focus and wrestler-facing practice items, never parent-only dashboard content. Coaches see assigned wrestlers and their own lesson records.
 - Send notes to an AI provider only through an authenticated Supabase Edge Function. Keep the AI API key in Supabase secrets, never in the GitHub Pages code. Preserve the caller's role and family authorization when reading or writing records.
 - Before enabling AI, tell coaches and parents that lesson text is sent to the selected AI provider for formatting. Use first names or the internal wrestler profile, minimize personal details, and review the provider's current retention terms.
@@ -138,7 +140,7 @@ The migration implements the family, role, lesson, checklist, training, mileston
 - `practice_assignments`: audience, source, steps, status, and due date when supplied.
 - `checklist_events`: append-only completion and note events.
 - `journal_entries`: training sessions, milestones, and wrestler reflections.
-- Planned AI provenance: source note, generated draft, provider/model metadata, coach edits, approver, and approval time. Keep this separate from direct coach cues.
+- AI provenance: coach-submitted and parent-submitted plans are separately attributed. Parent source notes are not retained by the atomic save RPC; parent recaps, reported cue wording, observations, and selected recommendations retain parent authorship. Coach source notes and coach approval metadata remain in the coach workflow.
 
 ## Privacy and platform constraints
 
