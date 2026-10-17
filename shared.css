@@ -3,3 +3,12 @@
 .coach-profile-panel{max-width:760px;padding:17px 0 20px;border-bottom:1px solid var(--line);margin-bottom:20px}.coach-profile-panel h4{font-size:14px;margin:0 0 7px}.coach-profile-panel .muted{font-size:11px;line-height:1.55}
 .feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:15px}.feedback-grid>.card{min-width:0}.reflection-card{padding:13px 0;border-bottom:1px solid #edf0eb}.reflection-card:last-child{border-bottom:0}.reflection-card p{font-size:12px;line-height:1.65;color:#53645a;white-space:pre-line;margin:7px 0}.reflection-meta{font-size:9px;letter-spacing:.6px;color:#829187;text-transform:uppercase}.reflection-card .record-label{margin-top:4px}@media(max-width:720px){.feedback-grid{grid-template-columns:1fr}}
 
+
+/* Supporting text remains readable on compact screens. */
+.form-stack label,.inline-form label,.draft-review label{font-size:12px}
+.record-meta{font-size:10px}
+.record-card p,.practice-copy p,.reflection-card p{font-size:13px}
+.practice-copy small,.fine-print{font-size:11px}
+.privacy-note{font-size:12px}
+.shared-footer{font-size:11px}
+
