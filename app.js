@@ -38,7 +38,7 @@
     const name = String(data.name || '').trim();
     const profileNumber = store.profiles.indexOf(data) + 1;
     $('#profile-name').textContent = name || `Athlete ${profileNumber}`;
-    $('#profile-avatar').textContent = name ? name[0].toUpperCase() : 'W';
+    $('#profile-avatar').textContent = name ? name[0].toUpperCase() : 'A';
     $('.welcome-row h1').innerHTML = `${name ? `${escapeHTML(name)}’s` : 'Your'} journey<span class="period">.</span>`;
     $('#profile-list').innerHTML = store.profiles.map((profile, index) => `<div class="profile-row ${profile.id === data.id ? 'selected' : ''}"><button class="profile-select" type="button" data-switch-profile="${escapeHTML(profile.id)}"><span class="avatar">${escapeHTML(profile.name ? profile.name[0].toUpperCase() : 'A')}</span><span><b>${escapeHTML(profile.name || `Athlete ${index + 1}`)}</b><small>${profile.id === data.id ? 'Currently selected' : 'Local profile'}</small></span></button>${renamingProfileId === profile.id ? `<div class="profile-rename-editor"><input data-profile-name maxlength="30" value="${escapeHTML(profile.name)}" aria-label="First name"><button type="button" data-save-profile="${escapeHTML(profile.id)}">Save</button><button type="button" data-cancel-profile aria-label="Cancel rename">×</button></div>` : `<button class="profile-rename" type="button" data-rename-profile="${escapeHTML(profile.id)}">${profile.name ? 'Rename' : 'Add name'}</button>`}</div>`).join('');
   }
