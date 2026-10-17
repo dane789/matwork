@@ -12,6 +12,7 @@ let wrestlers = [];
 let role = "";
 let selectedWrestler = "";
 let busy = false;
+let lessonDraft = null;
 
 function configReady() {
   const cfg = window.MATWORK_SUPABASE_CONFIG || {};
@@ -86,6 +87,7 @@ async function loadWorkspace() {
   hide("#athlete-setup", role === "parent" && ownedFamilies.length === 0);
   hide("#athlete-picker-card", wrestlers.length === 0);
   hide("#author-panel", role === "wrestler" || wrestlers.length === 0);
+  hide("#coach-capture", role !== "coach" || wrestlers.length === 0);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
   if (!wrestlers.length) {
     $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first wrestler profile to start the journal." : "No wrestler profile is linked to this account yet. Ask a parent for an access code."}</div>`;
@@ -132,6 +134,59 @@ async function loadRecords() {
 }
 
 function introForRole() { return { parent: "Full family record.", wrestler: "Your work, one step at a time.", coach: "Assigned coaching view." }[role]; }
+
+function draftField(label, key, value, rows = 3) {
+  return `<label>${esc(label)}<textarea data-draft-field="${esc(key)}" rows="${rows}">${esc(value || "")}</textarea></label>`;
+}
+
+function renderDraftReview(draft) {
+  lessonDraft = draft;
+  const originalTasks = (draft.coach_assigned_tasks || []).map((item) => ({ ...item, selected: true, origin: "Coach assignment captured" }));
+  const suggestedTasks = (draft.practice_suggestions || []).map((item) => ({ ...item, selected: false, origin: "AI suggestion — select only if you want to assign it" }));
+  const tasks = [...originalTasks, ...suggestedTasks];
+  const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Wrestler</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
+  const questions = draft.clarification_questions?.length ? `<div class="record-label">CHECK BEFORE SHARING</div><ul>${draft.clarification_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : "";
+  const node = $("#draft-review");
+  node.innerHTML = `<h4>Review the organized draft</h4><p class="muted">Nothing is saved or shared until you approve. AI suggestions are clearly separated from assignments captured in your note.</p>${draftField("Primary focus", "focus", draft.focus, 2)}${draftField("Coach cues from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Wrestler focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
+  node.hidden = false;
+  node.querySelector("#discard-draft").addEventListener("click", () => { lessonDraft = null; node.replaceChildren(); node.hidden = true; });
+  node.querySelector("#approve-draft").addEventListener("click", () => run(async () => saveApprovedDraft(tasks)));
+}
+
+async function saveApprovedDraft(tasks) {
+  if (!lessonDraft || role !== "coach") throw new Error("Coach review is required before sharing this plan.");
+  const node = $("#draft-review");
+  const value = (key) => node.querySelector(`[data-draft-field="${key}"]`).value.trim();
+  const selectedTasks = tasks.map((task, index) => ({
+    selected: node.querySelector(`[data-task-selected="${index}"]`).checked,
+    title: node.querySelector(`[data-task-title="${index}"]`).value.trim(),
+    instructions: node.querySelector(`[data-task-instructions="${index}"]`).value.trim(),
+    audience: node.querySelector(`[data-task-audience="${index}"]`).value
+  })).filter((task) => task.selected && task.title);
+  const payload = {
+    p_wrestler_id: selectedWrestler,
+    p_lesson_date: $("#capture-date").value,
+    p_lesson_number: $("#capture-number").value ? Number($("#capture-number").value) : null,
+    p_focus: value("focus"),
+    p_source_note: $("#capture-note").value.trim(),
+    p_coach_cues: value("coach_cues"),
+    p_observations: value("observations"),
+    p_wrestler_focus: value("wrestler_focus"),
+    p_parent_support: value("parent_support"),
+    p_follow_up_topics: value("follow_up_topics"),
+    p_tasks: selectedTasks,
+    p_ai_model: "gpt-5.4-mini"
+  };
+  if (!payload.p_focus) throw new Error("Add a primary focus before approving.");
+  const { error } = await client.rpc("save_coach_lesson_bundle", payload);
+  if (error) throw error;
+  lessonDraft = null;
+  $("#capture-note").value = "";
+  $("#capture-number").value = "";
+  node.replaceChildren(); node.hidden = true;
+  notice("Reviewed lesson and coach-approved checklist saved for the family.", "good");
+  await loadRecords();
+}
 
 async function run(action) {
   if (busy) return;
@@ -252,6 +307,20 @@ $("#lesson-form").addEventListener("submit", (event) => {
   });
 });
 
+$("#coach-capture-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned wrestler in the Coach workspace first.");
+    const note = $("#capture-note").value.trim();
+    if (note.length < 12) throw new Error("Add a little more detail before organizing the note.");
+    const { data, error } = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: note } });
+    if (error) throw error;
+    if (!data?.draft) throw new Error("The organized draft was empty. Please try again.");
+    renderDraftReview(data.draft);
+    notice("Draft ready. Review each section and choose which practice items to assign.", "good");
+  });
+});
+
 $("#assignment-form").addEventListener("submit", (event) => {
   event.preventDefault();
   run(async () => {
@@ -275,5 +344,6 @@ $("#practice-list").addEventListener("change", (event) => {
 });
 
 $("#lesson-date").value = new Date().toISOString().slice(0, 10);
+$("#capture-date").value = new Date().toISOString().slice(0, 10);
 initialize();
 
