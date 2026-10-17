@@ -313,8 +313,19 @@ $("#coach-capture-form").addEventListener("submit", (event) => {
     if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned wrestler in the Coach workspace first.");
     const note = $("#capture-note").value.trim();
     if (note.length < 12) throw new Error("Add a little more detail before organizing the note.");
-    const { data, error } = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: note } });
-    if (error) throw error;
+    let data;
+    try {
+      const response = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: note } });
+      if (response.error) throw response.error;
+      data = response.data;
+    } catch (error) {
+      const details = `${error?.message || ""} ${error?.name || ""}`;
+      if (/functionsfetcherror|failed to fetch|not found|404|503/i.test(details)) {
+        notice("The secure lesson organizer is still being connected. Your note remains in this box and has not been saved. You can use the lesson form below for now.", "info");
+        return;
+      }
+      throw error;
+    }
     if (!data?.draft) throw new Error("The organized draft was empty. Please try again.");
     renderDraftReview(data.draft);
     notice("Draft ready. Review each section and choose which practice items to assign.", "good");
