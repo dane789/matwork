@@ -121,7 +121,8 @@ async function loadWorkspace() {
   $("#role-eyebrow").textContent = role === "parent" ? "FAMILY VIEW" : role === "wrestler" ? "WRESTLER VIEW" : "COACH VIEW";
   $("#role-summary").textContent = intro;
   const ownedFamilies = memberships.filter((item) => item.role === "parent").map((item) => item.family_id);
-  hide("#athlete-setup", role === "parent" && ownedFamilies.length === 0);
+  hide("#athlete-setup", role !== "parent" || wrestlers.length > 0);
+  hide("#connect-role-card", role !== "coach");
   hide("#athlete-picker-card", wrestlers.length === 0);
   hide("#author-panel", role === "wrestler" || wrestlers.length === 0);
   hide("#feedback-panel", wrestlers.length === 0);
@@ -129,6 +130,11 @@ async function loadWorkspace() {
   hide("#coach-profile-panel", role !== "coach");
   hide("#coach-capture", role !== "coach" || wrestlers.length === 0);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
+  $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
+  $("#author-title").textContent = role === "coach" ? "Coach session tools" : "Parent support tools";
+  $("#author-summary").textContent = role === "coach"
+    ? "Capture the session, review the details, and set clear practice steps for the wrestler."
+    : "Keep family context clear, record support ideas, and share useful observations with the coach.";
   if (!wrestlers.length) {
     $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first wrestler profile to start the journal." : "No wrestler profile is linked to this account yet. Ask a parent for an access code."}</div>`;
     $("#practice-list").innerHTML = "";
