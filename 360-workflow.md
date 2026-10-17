@@ -81,7 +81,7 @@ This step remains gated until the administrator configures the `OPENAI_API_KEY` 
 
 After submission, AI formats the note into a structured draft with these sections:
 
-- **Parent lesson recap:** a technical section title/focus, one objective, concise key coaching points, and one lesson takeaway. Show this in a readable hierarchy, with the takeaway easy to spot. Coach-authored material is labeled **Coach notes**; AI organized material is labeled **AI organized · Coach approved**. Keep exact cue wording in a separate expandable area so an AI explanation is not presented as a direct quote.
+- **Parent lesson recap:** a technical section title/focus, one objective, concise key coaching points, and one lesson takeaway. Show this in a readable hierarchy, with the takeaway easy to spot. Coach-authored material is labeled **Coach notes**; a coach-submitted AI draft is labeled **AI organized · Coach approved** only after coach approval. Parent-provided notes stay labeled **Parent notes** (and **AI organized** if applicable); never imply the coach authored or approved a parent's recap. Keep exact cue wording in a separate expandable area so an AI explanation is not presented as a direct quote.
 - **Coach’s lesson record:** techniques covered and coaching cues present in the source note. Preserve quoted wording when possible.
 - **Wrestler focus:** one to three short, age-appropriate takeaways in direct language.
 - **At-home checklist:** only tasks supported by the source note or explicitly entered by the coach. Include repetitions, time, or intensity only when the coach supplied them.
@@ -104,6 +104,7 @@ Keep the original coach note with the approved lesson record so the formatted ve
 ### Provenance and safety rules
 
 - Separate exact coach cues and reported observations from AI explanations and suggestions.
+- Keep parent-reported summaries distinct from coach-submitted instruction. If source notes include separate partner or other-athlete observations, exclude them from this wrestler's individual plan.
 - Never invent a technique, coaching phrase, strength, weakness, result, assignment, or progress claim. If the note does not say, mark it as not provided.
 - Label each checklist item as coach-assigned or as an AI suggestion approved by the coach. Store the AI origin and coach approval separately so AI-generated wording is not misrepresented as a direct coach statement.
 - Parents can see the approved lesson and parent-support section. Wrestlers see their focus and wrestler-facing practice items, never parent-only dashboard content. Coaches see assigned wrestlers and their own lesson records.
