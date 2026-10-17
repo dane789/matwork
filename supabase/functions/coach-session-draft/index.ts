@@ -1,8 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
-const headers = { "Content-Type": "application/json", "Cache-Control": "no-store" };
-const respond = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers });
-
+const allowedOrigins = new Set([
+  "https://dane789.github.io",
+  "http://127.0.0.1:8892"
+]);
+const corsHeaders = (request: Request) => {
+  const origin = request.headers.get("Origin") || "";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://dane789.github.io",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
+  };
+};
+const respond = (request: Request, status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders(request), "Content-Type": "application/json", "Cache-Control": "no-store" }
+});
 const schema = {
   type: "object",
   additionalProperties: false,
@@ -21,28 +36,29 @@ const schema = {
 };
 
 Deno.serve(async (request) => {
-  if (request.method !== "POST") return respond(405, { error: "Use POST for a lesson note." });
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
+  if (request.method !== "POST") return respond(request, 405, { error: "Use POST for a lesson note." });
   const authorization = request.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) return respond(401, { error: "Sign in as an assigned coach first." });
+  if (!authorization?.startsWith("Bearer ")) return respond(request, 401, { error: "Sign in as an assigned coach first." });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const openAiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!supabaseUrl || !anonKey || !openAiKey) return respond(503, { error: "Lesson organization is not configured yet. Ask the Matwork administrator to finish setup." });
+  if (!supabaseUrl || !anonKey || !openAiKey) return respond(request, 503, { error: "Lesson organization is not configured yet. Ask the Matwork administrator to finish setup." });
 
   try {
     const supabase = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false, autoRefreshToken: false } });
     const { data: identity, error: identityError } = await supabase.auth.getUser();
-    if (identityError || !identity.user) return respond(401, { error: "Your sign-in has expired. Sign in again to continue." });
+    if (identityError || !identity.user) return respond(request, 401, { error: "Your sign-in has expired. Sign in again to continue." });
 
     const body = await request.json();
     const wrestlerId = typeof body?.wrestler_id === "string" ? body.wrestler_id : "";
     const coachNote = typeof body?.coach_note === "string" ? body.coach_note.trim() : "";
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(wrestlerId)) return respond(400, { error: "Choose an assigned wrestler." });
-    if (coachNote.length < 12 || coachNote.length > 12000) return respond(400, { error: "Lesson notes must be between 12 and 12,000 characters." });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(wrestlerId)) return respond(request, 400, { error: "Choose an assigned wrestler." });
+    if (coachNote.length < 12 || coachNote.length > 12000) return respond(request, 400, { error: "Lesson notes must be between 12 and 12,000 characters." });
 
     const { data: assignment, error: assignmentError } = await supabase.from("coach_assignments").select("wrestler_id").eq("coach_user_id", identity.user.id).eq("wrestler_id", wrestlerId).is("revoked_at", null).maybeSingle();
-    if (assignmentError || !assignment) return respond(403, { error: "This wrestler is not assigned to your coach account." });
+    if (assignmentError || !assignment) return respond(request, 403, { error: "This wrestler is not assigned to your coach account." });
 
     const aiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -58,16 +74,17 @@ Deno.serve(async (request) => {
     });
     const result = await aiResponse.json();
     if (!aiResponse.ok) {
-      console.error("OpenAI response failed", aiResponse.status, result?.error?.type || "provider error");
-      return respond(502, { error: "Matwork could not organize that note right now. Your original note is still in the capture box; try again shortly." });
+      const providerCode = result?.error?.code || result?.error?.type || `http_${aiResponse.status}`;
+      console.error("OpenAI response failed", aiResponse.status, providerCode);
+      return respond(request, 502, { error: `The OpenAI request failed (${aiResponse.status}, ${providerCode}). The lesson is still a draft and has not been saved.` });
     }
     const outputText = result?.output_text || result?.output?.flatMap((item: { content?: Array<{ type?: string; text?: string }> }) => item.content || []).find((part: { type?: string }) => part.type === "output_text")?.text;
-    if (result?.status === "incomplete" || !outputText) return respond(502, { error: "The draft did not finish. Your original note is still in the capture box; try again." });
+    if (result?.status === "incomplete" || !outputText) return respond(request, 502, { error: "The draft did not finish. Your original note is still in the capture box; try again." });
     const draft = JSON.parse(outputText);
-    return respond(200, { draft, model: "gpt-5.4-mini" });
+    return respond(request, 200, { draft, model: "gpt-5.4-mini" });
   } catch (error) {
     console.error("Coach note draft failed", error instanceof Error ? error.message : "unknown error");
-    return respond(500, { error: "Matwork could not organize that note. Your original note is still in the capture box." });
+    return respond(request, 500, { error: "Matwork could not organize that note. Your original note is still in the capture box." });
   }
 });
 
