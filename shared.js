@@ -137,7 +137,7 @@ async function run(action) {
   if (busy) return;
   setBusy(true);
   try { await action(); }
-  catch (error) { notice(error?.message || "Something went wrong. Please try again.", "bad"); }
+  catch (error) { const message = error?.message || "Something went wrong. Please try again."; notice(/email rate limit exceeded|rate limit|too many requests/i.test(message) ? "Matwork’s shared email service has reached its hourly limit. No new link was sent. Use the newest email link or try again later." : message, "bad"); }
   finally { setBusy(false); }
 }
 
@@ -168,7 +168,7 @@ async function initialize() {
       await acceptInvite(code);
       history.replaceState({}, "", location.pathname);
     } else if (user) await loadIdentity();
-    else { showSignedOut(); notice("Use the email address your parent or family uses for this workspace."); }
+    else { showSignedOut(); notice("Use your Matwork email. Parents use the family account email; wrestlers and coaches use their invited email."); }
     client.auth.onAuthStateChange((_event, newSession) => {
       session = newSession; user = newSession?.user || null;
       queueMicrotask(() => run(() => user ? loadIdentity() : showSignedOut()));
