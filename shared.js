@@ -118,7 +118,7 @@ function showSignedOut() {
 }
 
 function roleLabels(available) {
-  return { parent: "Parent dashboard", wrestler: "Athlete view", coach: "Coach workspace" }[available];
+  return { parent: "Parent", wrestler: "Athlete", coach: "Coach" }[available];
 }
 
 async function loadIdentity() {
@@ -177,11 +177,11 @@ async function loadWorkspace() {
   const { data, error } = await query.order("created_at", { ascending: true });
   if (error) throw error;
   wrestlers = data || [];
-  const title = { parent: "Parent dashboard", wrestler: "Athlete view", coach: "Coach workspace" }[role];
+  const title = { parent: "Parent view", wrestler: "Athlete view", coach: "Coach view" }[role];
   const intro = {
-    parent: "Everything for your athlete, including lesson details and parent-only notes.",
-    wrestler: "Your focus, practice checklist, lesson cues, and progress.",
-    coach: "Assigned athletes, coaching notes, and at-home practice follow-through."
+    parent: "Review the lesson, support at-home practice, and share your perspective when useful.",
+    wrestler: "See your next practice steps and check them off when you do the work.",
+    coach: "Capture lesson notes and review the practice progress shared with you."
   }[role];
   $("#role-title").textContent = title;
   $("#role-eyebrow").textContent = role === "parent" ? "FAMILY VIEW" : role === "wrestler" ? "ATHLETE VIEW" : "COACH VIEW";
@@ -200,10 +200,10 @@ async function loadWorkspace() {
   if (!$("#parent-capture-date").value) $("#parent-capture-date").value = new Date().toISOString().slice(0, 10);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
   $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
-  $("#author-title").textContent = role === "coach" ? "Coach session tools" : "Build the next plan";
+  $("#author-title").textContent = role === "coach" ? "Add lesson notes" : "Build the next plan";
   $("#author-summary").textContent = role === "coach"
-    ? "Capture the session, review the details, and set clear practice steps for the athlete."
-    : "Start with the coach’s notes and your perspective. Review a draft, choose athlete steps, and decide whether to share it with the coach.";
+    ? "Capture the key cues and follow-up steps for this athlete."
+    : "Add the coach’s notes and your perspective. Review the draft and choose the athlete steps to save.";
   if (!wrestlers.length) {
     $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first athlete profile to start the journal." : "No athlete profile is linked to this account yet. Ask a parent for an access code."}</div>`;
     $("#practice-list").innerHTML = "";
