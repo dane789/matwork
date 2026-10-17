@@ -1,6 +1,21 @@
 const $ = (selector) => document.querySelector(selector);
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const shortDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Date not set";
+
+function renderLessonItem(item, coachName) {
+  const attribution = coachName ? ` · ${esc(coachName)}` : "";
+  const origin = item.ai_assisted ? "AI ORGANIZED · COACH APPROVED" : "COACH NOTES";
+  const label = `${origin} · ${esc(item.kind.replaceAll("_", " "))}${attribution}`;
+  const content = item.content || "";
+  const objective = content.match(/(?:^|\n)Objective:\s*([\s\S]*?)(?=\nKey coaching points:|\nLesson takeaway:|\nCoach cue wording:|$)/i)?.[1]?.trim();
+  const points = content.match(/(?:^|\n)Key coaching points:\s*([\s\S]*?)(?=\nLesson takeaway:|\nCoach cue wording:|$)/i)?.[1]?.trim();
+  const takeaway = content.match(/(?:^|\n)Lesson takeaway:\s*([\s\S]*?)(?=\nCoach cue wording:|$)/i)?.[1]?.trim();
+  const cues = content.match(/(?:^|\n)Coach cue wording:\s*([\s\S]*?)$/i)?.[1]?.trim();
+  const list = points ? points.split(/\n+/).map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter(Boolean) : [];
+  const labelClass = item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : "";
+  if (!objective && !list.length && !takeaway && !cues) return `<div class="record-label ${labelClass}">${label}</div><p>${esc(content)}</p>`;
+  return `<div class="record-label ${labelClass}">${label}</div><div class="lesson-recap">${objective ? `<div class="recap-section"><b>Objective</b><p>${esc(objective)}</p></div>` : ""}${list.length ? `<div class="recap-section"><b>Key coaching points</b><ul>${list.map((point) => `<li>${esc(point)}</li>`).join("")}</ul></div>` : ""}${takeaway ? `<div class="recap-takeaway"><b>Lesson takeaway</b><p>${esc(takeaway)}</p></div>` : ""}${cues ? `<details class="recap-cues"><summary>Coach cue wording</summary><p>${esc(cues)}</p></details>` : ""}</div>`;
+}
 const notice = (message, kind = "info") => { const node = $("#notice"); node.textContent = message; node.dataset.kind = kind; node.hidden = !message; };
 const hide = (selector, value = true) => { $(selector).hidden = value; };
 let client;
@@ -199,7 +214,7 @@ async function loadRecords() {
     const notes = items.filter((item) => item.lesson_id === lesson.id);
     const coachName = coachProfiles.get(lesson.created_by);
     const instructor = lesson.instructor_label === "Coach" ? (coachName || "Coach") : lesson.instructor_label;
-    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${instructor ? ` · Coach: ${esc(instructor)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => { const itemCoach = coachProfiles.get(item.authored_by); const attribution = itemCoach ? ` · ${esc(itemCoach)}` : ""; return `<div class="record-label ${item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : ""}">${item.ai_assisted ? "AI ORGANIZED · COACH APPROVED · " : ""}${esc(item.kind.replaceAll("_", " "))}${attribution}</div><p>${esc(item.content)}</p>`; }).join("")}</article>`;
+    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${instructor ? ` · Coach: ${esc(instructor)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => renderLessonItem(item, coachProfiles.get(item.authored_by))).join("")}</article>`;
   }).join("") : `<div class="empty-state">No lessons have been recorded here yet.</div>`;
   $("#practice-list").innerHTML = visibleAssignments.length ? visibleAssignments.map((assignment) => {
     const event = latest.get(assignment.id);
@@ -307,7 +322,7 @@ function renderDraftReview(draft) {
   const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Athlete</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
   const questions = draft.clarification_questions?.length ? `<div class="record-label">CHECK BEFORE SHARING</div><ul>${draft.clarification_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : "";
   const node = $("#draft-review");
-  node.innerHTML = `<h4>Review the organized draft</h4><p class="muted">Nothing is saved or shared until you approve. AI suggestions are clearly separated from assignments captured in your note.</p>${draftField("Primary focus", "focus", draft.focus, 2)}${draftField("Coach cues from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Athlete focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
+  node.innerHTML = `<h4>Quick review before sharing</h4><p class="muted">Check the short lesson recap and practice steps. Nothing is saved or shared until you approve. AI suggestions stay separate from work stated in your note.</p>${draftField("Lesson focus", "focus", draft.focus, 2)}${draftField("Parent recap · Objective", "objective", draft.objective, 2)}${draftField("Parent recap · Key coaching points (one per line)", "key_coaching_points", (draft.key_coaching_points || []).join("\n"), 5)}${draftField("Parent recap · Lesson takeaway", "lesson_takeaway", draft.lesson_takeaway, 2)}${draftField("Coach cue wording from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Athlete focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
   node.hidden = false;
   node.querySelector("#discard-draft").addEventListener("click", () => { lessonDraft = null; node.replaceChildren(); node.hidden = true; });
   node.querySelector("#approve-draft").addEventListener("click", () => run(async () => saveApprovedDraft(tasks)));
@@ -330,7 +345,12 @@ async function saveApprovedDraft(tasks) {
     p_lesson_number: $("#capture-number").value ? Number($("#capture-number").value) : null,
     p_focus: value("focus"),
     p_source_note: $("#capture-note").value.trim(),
-    p_coach_cues: value("coach_cues"),
+    p_coach_cues: [
+      value("objective") ? `Objective:\n${value("objective")}` : "",
+      value("key_coaching_points") ? `Key coaching points:\n${value("key_coaching_points").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => `- ${line}`).join("\n")}` : "",
+      value("lesson_takeaway") ? `Lesson takeaway:\n${value("lesson_takeaway")}` : "",
+      value("coach_cues") ? `Coach cue wording:\n${value("coach_cues")}` : ""
+    ].filter(Boolean).join("\n\n"),
     p_observations: value("observations"),
     p_wrestler_focus: value("wrestler_focus"),
     p_parent_support: value("parent_support"),
