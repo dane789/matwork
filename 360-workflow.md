@@ -1,6 +1,12 @@
 # Matwork 360° Workflow
 
-This document defines the product behavior for a shared wrestler, parent, and coach experience. It contains no wrestler-specific lesson record.
+This document defines the product behavior for Matwork’s athlete, parent, and coach experience. It contains no athlete-specific lesson record.
+
+## Product boundary
+
+Matwork’s core service is one coach-attributed development history attached to the athlete: lesson instruction becomes a short practice plan; the athlete reports completed work; the parent supports the plan and may share their perspective; assigned coaches use that feedback to prepare the next lesson. Every primary screen and feature should make that loop clearer or easier. Generic quotes, activity metrics, and standalone journals stay out of the main workflow unless they directly improve follow-through or communication.
+
+Coach attribution is part of the history, not a separate feature: when multiple coaches are assigned to one athlete, each lesson should identify its author and remain available to the other assigned coaches under the existing access rules.
 
 ## Current implementation status (October 17, 2026)
 
@@ -9,9 +15,9 @@ This document defines the product behavior for a shared wrestler, parent, and co
 - Parent, wrestler, and coach access still needs end-to-end verification with separate accounts before real records are relied on.
 - The built-in Supabase email sender is limited to two auth emails per hour. Custom SMTP is needed for reliable onboarding beyond early testing.
 - The public coach capture and editable review interface is in GitHub Pages. Migration `002_coach_note_capture.sql` is applied; it stores source notes in a table available only to parents and assigned coaches and saves a reviewed lesson bundle atomically. Lesson items and approved checklist tasks preserve AI provenance.
-- A parent/wrestler check-in loop is prepared in the shared workspace source. Parents choose family-only, coach-only, or wrestler-and-coach visibility; wrestlers choose private-to-self/family or share with coach. Coaches see only explicitly shared entries, labeled by the author's perspective. Migration `005_reflection_sharing.sql` is required before this feature is active; the page hides the new form and keeps existing views usable until applied.
+- Parent and athlete check-ins are available in the shared workspace. Parents choose family-only, coach-only, or athlete-and-coach visibility; athletes choose private-to-self/family or share with coach. Coaches see only explicitly shared entries, labeled by the author's perspective. Migration `005_reflection_sharing.sql` is applied.
 - The authenticated `coach-session-draft` Edge Function is deployed with CORS preflight support for GitHub Pages and the local preview. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret is configured in Supabase. During the signed-in Jared pilot, the function reached OpenAI but received `429 credit_balance_exhausted`; the captured note was not saved. Add API credits before retrying.
-- AI is optional: the coach can write structured notes or use free device keyboard dictation without an API call. The updated function source sends only the current note, has no automatic retry, caps output at 1,600 tokens, and enforces a monthly project allowance (100 drafts) plus a per-coach allowance (20 drafts). Coaches do not see or manage API costs. These limits become active after migration `004_ai_usage_limits.sql` is applied and the function is redeployed. A lower-cost nano model can be considered after a coach checks its accuracy on an approved sample.
+- AI is optional: coach or parent can write notes or use free device keyboard dictation without an API call. The function sends only the current note, has no automatic retry, caps output at 1,600 tokens, and enforces a monthly project allowance (100 drafts) plus a per-user allowance (20 drafts). Manual lesson capture and a usable practice plan remain available if AI credits are unavailable.
 - Parent-led planning is live: Coach notes and Parent observations stay separated; the parent reviews the AI draft and chooses any parent recommendations. The parent chooses per plan whether to share the recap and checklist progress with the assigned coach. Migration `006_parent_ai_drafts.sql` and the matching parent-capable Edge Function are deployed. AI generation itself remains untested since the prior API credit error; no new request was sent.
 
 ## Remaining pilot work
@@ -119,7 +125,24 @@ OpenAI's API does not use API inputs and outputs for model training by default, 
 
 Matwork turns a short note into a clear handoff for the whole support team: the wrestler knows what to practice, the parent knows how to help, and the coach can review checklist follow-through before the next lesson. The coach remains in control of what is attributed to them and what is shared.
 
-The coach-facing business value is a polished, organized service with less after-session administration. A coach can spend more time teaching and training, while families see the lesson's value and know how to continue the work. A useful feedback loop may make planning the next private session easier and more timely. Future paid coach plans could center on individual athlete workspaces, lesson records, and follow-through tools; pricing and packaging should follow pilot feedback rather than be assumed in advance.
+The coach-facing value is a polished, organized service with less after-session administration. Coaches can spend more time teaching, while families know how to reinforce the lesson and assigned coaches can see the relevant follow-through.
+
+## Monetization hypotheses — private planning only
+
+Keep athlete and parent access to the shared core included. The likely buyer is the coach or coaching organization that gains a more professional lesson experience, an attributed athlete history across coaches, less follow-up administration, and better preparation for the next private. Do not sell young athletes’ data, add ads to the youth experience, or make AI use a prerequisite for a useful plan.
+
+Potential models to validate:
+
+- **Independent coach plan:** a simple monthly or annual subscription based on active athlete workspaces or a small roster band. Core notes, checklists, coach attribution, and sharing should be included; do not meter by words or individual lesson entries because that would discourage useful record keeping.
+- **Multi-coach club plan:** a higher organization plan if assigned coaches need shared athlete histories, coach attribution, and light roster administration across a club or academy. This only becomes valuable after multi-coach access and attribution are proven reliable.
+- **Optional AI allowance:** include a bounded number of reviewed drafts in a coach plan. Keep manual capture fully usable and enforce a hard server-side limit. Consider a paid increase only after actual usage and unit costs are measured; never surprise a coach with per-note charges.
+- **Coach-delivered development package:** coaches may include Matwork follow-up in their own private-lesson package. Matwork should not take a booking commission unless it later owns booking and payment services.
+
+Public competitor pricing is a reference point, not a Matwork price recommendation. CoachNow separates athlete/parent access from paid coach and academy tiers; its current page lists Analyze at $9.99 monthly or $59 yearly, PRO at $49.99 monthly or $499 yearly, and Academy at $89.99 monthly or $899 yearly, with multi-coach pricing available. Its help center says invited athletes and parents generally do not need a paid membership ([CoachNow pricing](https://coachnow.com/pricing), [CoachNow help](https://help.coachnow.io/en/articles/2477947-how-can-i-update-manage-my-subscription-and-billing-for-coachnow)). TeamSnap offers a free single-team entry tier and custom club/league pricing ([TeamSnap pricing](https://www.teamsnap.com/pricing)). Plans and promotions change; these pages were reviewed on October 17, 2026.
+
+For the youth context, prioritize data minimization, clear parent involvement, and review/deletion practices; the FTC’s COPPA guidance specifically calls out information collected, parental notice and consent, parent review/deletion, and security/retention ([FTC COPPA FAQ](https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions)). Confirm legal applicability with counsel before offering the service broadly.
+
+Before setting price, interview private coaches and families. Track how many lesson records are completed, whether athletes use assigned steps, whether coaches review shared feedback before the next session, and how much admin time the workflow removes. Treat repeat private sessions as a possible outcome to validate, not a guaranteed result.
 
 ## Assignment and checklist behavior
 
