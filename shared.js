@@ -189,8 +189,7 @@ async function loadRecords() {
   $("#practice-heading").textContent = role === "wrestler" ? "At-home practice checklist" : "At-home practice";
   $("#practice-intro").textContent = role === "wrestler"
     ? "Tap each step after you practice it. Your coach can see your check-ins and use them to plan what comes next."
-    : role === "coach" ? "See the athlete’s practice check-ins before planning the next session." : "See what is being practiced between lessons. Coach assignments and parent recommendations are labeled separately.";
-  hide("#practice-intro", role === "parent");
+    : role === "coach" ? "Review the athlete’s check-ins before planning the next session." : "See what is being practiced between lessons. Coach assignments and parent recommendations are labeled separately.";
   hide("#practice-progress", role !== "wrestler" || athleteAssignments.length === 0);
   if (role === "wrestler" && athleteAssignments.length) {
     $("#practice-progress-label").textContent = `${athleteCompleted} of ${athleteAssignments.length} practiced`;
