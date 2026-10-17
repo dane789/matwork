@@ -9,18 +9,20 @@ This document defines the product behavior for a shared wrestler, parent, and co
 - Parent, wrestler, and coach access still needs end-to-end verification with separate accounts before real records are relied on.
 - The built-in Supabase email sender is limited to two auth emails per hour. Custom SMTP is needed for reliable onboarding beyond early testing.
 - The public coach capture and editable review interface is in GitHub Pages. Migration `002_coach_note_capture.sql` is applied; it stores source notes in a table available only to parents and assigned coaches and saves a reviewed lesson bundle atomically. Lesson items and approved checklist tasks preserve AI provenance.
+- A parent/wrestler check-in loop is prepared in the shared workspace source. Parents choose family-only, coach-only, or wrestler-and-coach visibility; wrestlers choose private-to-self/family or share with coach. Coaches see only explicitly shared entries, labeled by the author's perspective. Migration `005_reflection_sharing.sql` is required before this feature is active; the page hides the new form and keeps existing views usable until applied.
 - The authenticated `coach-session-draft` Edge Function is deployed with CORS preflight support for GitHub Pages and the local preview. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret is configured in Supabase. During the signed-in Jared pilot, the function reached OpenAI but received `429 credit_balance_exhausted`; the captured note was not saved. Add API credits before retrying.
 - AI is optional: the coach can write structured notes or use free device keyboard dictation without an API call. The updated function source sends only the current note, has no automatic retry, caps output at 1,600 tokens, and enforces a monthly project allowance (100 drafts) plus a per-coach allowance (20 drafts). Coaches do not see or manage API costs. These limits become active after migration `004_ai_usage_limits.sql` is applied and the function is redeployed. A lower-cost nano model can be considered after a coach checks its accuracy on an approved sample.
 
 ## Remaining pilot work
 
-The owner currently has parent and pilot-coach views in one signed-in account. AI drafting is waiting for OpenAI API credits; the lesson text remains unsaved in the capture form. Apply the usage-limit migration and redeploy before enabling AI again. Until then, use the manual lesson form; adding API credits alone is not sufficient to activate the new safeguards.
+The owner currently has parent and pilot-coach views in one signed-in account. AI drafting is waiting for OpenAI API credits; the lesson text remains unsaved in the capture form. Apply migrations `004_ai_usage_limits.sql` and `005_reflection_sharing.sql`, then redeploy the Edge Function before enabling AI again. Until then, use manual lesson entry; adding API credits alone is not sufficient to activate the new safeguards.
 
 1. Apply migration `004_ai_usage_limits.sql` and redeploy the updated Edge Function before any future AI attempt. Add API credits only if the family chooses to do so; no API retry should happen automatically. If credits are added later, keep the note labeled as parent-entered pilot data until the actual coach confirms it.
 2. Preserve exact coach cues separately from parent interpretation and suggested practice. Keep surnames, birthdays, and other identifying details out of public source and shared lesson notes.
 3. Verify parent, wrestler, and coach views with separate accounts where possible.
 4. Build and verify training logs and milestones after the role boundaries are confirmed.
 5. Configure custom SMTP before inviting more families or relying on frequent email sign-ins.
+6. Apply migration `005_reflection_sharing.sql`, then verify parent and wrestler check-ins appear to coaches only when intentionally shared.
 
 ## Role access
 
