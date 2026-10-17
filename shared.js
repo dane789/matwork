@@ -16,6 +16,7 @@ let lessonDraft = null;
 let coachProfiles = new Map();
 let ownCoachProfile = null;
 let coachProfilesAvailable = true;
+let reflectionSharingAvailable = true;
 
 function isCoachProfilesMissing(error) {
   return error?.code === "42P01" || error?.code === "PGRST205" || /coach_profiles.*(not found|does not exist)/i.test(error?.message || "");
@@ -30,6 +31,10 @@ function setCoachProfilesUnavailable() {
     status.textContent = "Coach name attribution is waiting for a database update. Until then, coach notes appear as “Coach.”";
     status.hidden = false;
   }
+}
+
+function isReflectionSharingMissing(error) {
+  return (error?.code === "42703" || error?.code === "PGRST204") && /author_role|share_with_coach/i.test(error?.message || "");
 }
 
 function configReady() {
@@ -118,6 +123,8 @@ async function loadWorkspace() {
   hide("#athlete-setup", role === "parent" && ownedFamilies.length === 0);
   hide("#athlete-picker-card", wrestlers.length === 0);
   hide("#author-panel", role === "wrestler" || wrestlers.length === 0);
+  hide("#feedback-panel", wrestlers.length === 0);
+  configureReflectionForm();
   hide("#coach-profile-panel", role !== "coach");
   hide("#coach-capture", role !== "coach" || wrestlers.length === 0);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
@@ -137,13 +144,20 @@ async function loadWorkspace() {
 async function loadRecords() {
   const athleteId = selectedWrestler;
   if (!athleteId) return;
-  const [lessonResult, itemResult, assignmentResult, eventResult] = await Promise.all([
+  const [lessonResult, itemResult, assignmentResult, eventResult, initialReflectionResult] = await Promise.all([
     client.from("lessons").select("id,lesson_number,lesson_date,focus,instructor_label,created_by").eq("wrestler_id", athleteId).order("lesson_date", { ascending: false }),
     client.from("lesson_items").select("id,lesson_id,wrestler_id,kind,content,audience,authored_by,created_at,ai_assisted").eq("wrestler_id", athleteId).order("created_at", { ascending: true }),
     client.from("practice_assignments").select("id,wrestler_id,lesson_id,title,instructions,source,coach_origin,audience,due_date,active,created_at").eq("wrestler_id", athleteId).eq("active", true).order("created_at", { ascending: false }),
-    client.from("checklist_events").select("assignment_id,completed,recorded_at,note").eq("wrestler_id", athleteId).order("recorded_at", { ascending: false })
+    client.from("checklist_events").select("assignment_id,completed,recorded_at,note").eq("wrestler_id", athleteId).order("recorded_at", { ascending: false }),
+    client.from("reflections").select("id,reflection_date,content,mood,audience,author_role,share_with_coach,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false })
   ]);
-  const error = [lessonResult, itemResult, assignmentResult, eventResult].find((result) => result.error)?.error;
+  let reflectionResult = initialReflectionResult;
+  if (isReflectionSharingMissing(reflectionResult.error)) {
+    reflectionSharingAvailable = false;
+    reflectionResult = await client.from("reflections").select("id,reflection_date,content,mood,audience,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false });
+    configureReflectionForm();
+  } else if (!reflectionResult.error) { reflectionSharingAvailable = true; configureReflectionForm(); }
+  const error = [lessonResult, itemResult, assignmentResult, eventResult, reflectionResult].find((result) => result.error)?.error;
   if (error) throw error;
   const lessons = lessonResult.data || [];
   const items = itemResult.data || [];
@@ -174,12 +188,74 @@ async function loadRecords() {
     const coachAuthor = assignment.source === "coach" ? coachProfiles.get(assignment.created_by) : "";
     return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "WRESTLER" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
   }).join("") : `<div class="empty-state">No active practice items yet. A parent or coach can add a clear next step after a lesson.</div>`;
+  const reflections = reflectionResult.data || [];
+  $("#reflection-list-intro").textContent = !reflectionSharingAvailable
+    ? "Check-in sharing is being connected. Use the lesson and practice forms above for now."
+    : role === "coach"
+    ? "Family and wrestler notes explicitly shared with you, ready to inform the next session."
+    : role === "parent"
+      ? "Your perspective stays with the family unless you choose to share it."
+      : "Your check-ins stay yours unless you choose to share them with your coach.";
+  $("#reflection-list").innerHTML = reflections.length ? reflections.map((entry) => {
+    const author = entry.author_role === "parent" ? "PARENT PERSPECTIVE" : entry.author_role === "wrestler" ? "WRESTLER CHECK-IN" : "FAMILY CHECK-IN";
+    const audience = entry.audience === "parent" && !entry.share_with_coach ? "FAMILY ONLY" : entry.share_with_coach || entry.audience === "coach" ? "SHARED WITH COACH" : "WRESTLER VIEW";
+    return `<article class="reflection-card"><div class="reflection-meta">${esc(shortDate(entry.reflection_date))} · ${author}</div><div class="record-label">${role === "coach" ? "SHARED WITH COACH" : audience}</div><p>${esc(entry.content)}</p>${entry.mood ? `<small class="fine-print">How it felt: ${esc(entry.mood)}</small>` : ""}</article>`;
+  }).join("") : `<div class="empty-state">No check-ins yet. A short note can help the next conversation start in the right place.</div>`;
   const completed = assignments.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const coachAssigned = assignments.filter((assignment) => assignment.source === "coach");
   const coachCompleted = coachAssigned.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const athlete = wrestlers.find((item) => item.id === athleteId);
   $("#role-summary").textContent = `${athlete?.first_name || "Wrestler"} · ${introForRole()}${role === "coach" ? ` ${coachCompleted} of ${coachAssigned.length} coach-assigned items marked complete.` : role === "parent" ? ` ${completed} of ${assignments.length} practice items marked complete.` : ""}`;
 }
+
+function configureReflectionForm() {
+  const select = $("#reflection-sharing");
+  if (!select) return;
+  const options = role === "parent"
+    ? [["family", "Family only"], ["coach", "Share with coach"], ["both", "Share with wrestler and coach"]]
+    : role === "wrestler"
+      ? [["private", "Only me and my family"], ["coach", "Share with coach"]]
+      : [];
+  select.replaceChildren(...options.map(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; return option; }));
+  hide("#reflection-compose", role === "coach" || !reflectionSharingAvailable);
+  $("#reflection-title").textContent = role === "parent" ? "What are you noticing?" : "Your check-in";
+  $("#reflection-prompt").textContent = role === "parent"
+    ? "Share what you are seeing, what you hope to reinforce, or what would help the coach plan. Keep coaching cues and your own perspective clearly separate."
+    : "What went well? What felt hard? What do you want to work on next? Short answers are fine.";
+  $("#reflection-content-label").firstChild.textContent = role === "parent" ? "Your perspective for the support team" : "What would you like your support team to know?";
+  hide("#reflection-mood-label", role !== "wrestler");
+  if (!$("#reflection-date").value) $("#reflection-date").value = new Date().toISOString().slice(0, 10);
+}
+
+$("#reflection-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    if (!user || !selectedWrestler || !["parent", "wrestler"].includes(role)) throw new Error("Choose a family or wrestler view to add a check-in.");
+    const content = $("#reflection-content").value.trim();
+    if (content.length < 3) throw new Error("Add a short check-in before sharing.");
+    const choice = $("#reflection-sharing").value;
+    const audience = role === "parent"
+      ? ({ family: "parent", coach: "coach", both: "wrestler" }[choice] || "parent")
+      : "wrestler";
+    const shareWithCoach = role === "parent" ? choice === "both" : choice === "coach";
+    const { error } = await client.from("reflections").insert({
+      wrestler_id: selectedWrestler,
+      reflection_date: $("#reflection-date").value,
+      content,
+      mood: role === "wrestler" ? $("#reflection-mood").value : "",
+      audience,
+      author_role: role,
+      share_with_coach: shareWithCoach,
+      created_by: user.id
+    });
+    if (error) throw error;
+    event.target.reset();
+    $("#reflection-date").value = new Date().toISOString().slice(0, 10);
+    configureReflectionForm();
+    notice(shareWithCoach ? "Check-in shared with the coach for the next conversation." : "Check-in saved with the sharing choice you selected.", "good");
+    await loadRecords();
+  });
+});
 
 $("#coach-profile-form").addEventListener("submit", (event) => {
   event.preventDefault();
