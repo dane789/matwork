@@ -5,6 +5,10 @@ alter table public.lessons
   add column ai_model text,
   add column coach_approved_at timestamptz,
   add column coach_approved_by uuid references auth.users(id) on delete set null;
+alter table public.lesson_items add column ai_assisted boolean not null default false;
+alter table public.practice_assignments
+  add column coach_origin text not null default 'coach_stated'
+  check (coach_origin in ('coach_stated', 'ai_suggestion_approved'));
 
 create table public.coach_source_notes (
   lesson_id uuid primary key,
@@ -62,33 +66,35 @@ begin
   values (new_lesson_id, p_wrestler_id, p_source_note, current_user_id);
 
   if nullif(trim(coalesce(p_coach_cues, '')), '') is not null then
-    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by)
-    values (new_lesson_id, p_wrestler_id, 'coach_cue', trim(p_coach_cues), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id);
+    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by, ai_assisted)
+    values (new_lesson_id, p_wrestler_id, 'coach_cue', trim(p_coach_cues), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id, true);
   end if;
   if nullif(trim(coalesce(p_observations, '')), '') is not null then
-    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by)
-    values (new_lesson_id, p_wrestler_id, 'coach_observation', trim(p_observations), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id);
+    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by, ai_assisted)
+    values (new_lesson_id, p_wrestler_id, 'coach_observation', trim(p_observations), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id, true);
   end if;
   if nullif(trim(coalesce(p_wrestler_focus, '')), '') is not null then
-    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by)
-    values (new_lesson_id, p_wrestler_id, 'development_priority', trim(p_wrestler_focus), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id);
+    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by, ai_assisted)
+    values (new_lesson_id, p_wrestler_id, 'development_priority', trim(p_wrestler_focus), array['parent','wrestler','coach']::public.reflection_audience[], current_user_id, true);
   end if;
   if nullif(trim(coalesce(p_parent_support, '')), '') is not null then
-    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by)
-    values (new_lesson_id, p_wrestler_id, 'parent_interpretation', trim(p_parent_support), array['parent','coach']::public.reflection_audience[], current_user_id);
+    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by, ai_assisted)
+    values (new_lesson_id, p_wrestler_id, 'parent_interpretation', trim(p_parent_support), array['parent','coach']::public.reflection_audience[], current_user_id, true);
   end if;
   if nullif(trim(coalesce(p_follow_up_topics, '')), '') is not null then
-    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by)
-    values (new_lesson_id, p_wrestler_id, 'lesson_follow_up', trim(p_follow_up_topics), array['parent','coach']::public.reflection_audience[], current_user_id);
+    insert into public.lesson_items (lesson_id, wrestler_id, kind, content, audience, authored_by, ai_assisted)
+    values (new_lesson_id, p_wrestler_id, 'lesson_follow_up', trim(p_follow_up_topics), array['parent','coach']::public.reflection_audience[], current_user_id, true);
   end if;
 
   for task in select value from jsonb_array_elements(coalesce(p_tasks, '[]'::jsonb)) loop
     task_count := task_count + 1;
-    if nullif(trim(coalesce(task->>'title', '')), '') is null or coalesce(task->>'audience', '') not in ('wrestler', 'parent') then
+    if nullif(trim(coalesce(task->>'title', '')), '') is null
+      or coalesce(task->>'audience', '') not in ('wrestler', 'parent')
+      or coalesce(task->>'coach_origin', '') not in ('coach_stated', 'ai_suggestion_approved') then
       raise exception 'Each checklist item needs a title and a valid audience';
     end if;
-    insert into public.practice_assignments (wrestler_id, lesson_id, title, instructions, source, audience, created_by)
-    values (p_wrestler_id, new_lesson_id, left(trim(task->>'title'), 140), left(coalesce(task->>'instructions', ''), 3000), 'coach', (task->>'audience')::public.assignment_audience, current_user_id);
+    insert into public.practice_assignments (wrestler_id, lesson_id, title, instructions, source, audience, created_by, coach_origin)
+    values (p_wrestler_id, new_lesson_id, left(trim(task->>'title'), 140), left(coalesce(task->>'instructions', ''), 3000), 'coach', (task->>'audience')::public.assignment_audience, current_user_id, task->>'coach_origin');
   end loop;
 
   return new_lesson_id;
