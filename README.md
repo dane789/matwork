@@ -37,7 +37,7 @@ When opened with the earlier single-journal version, Matwork brings that journal
 
 ## Shared wrestler, parent, and coach experience
 
-The current public GitHub Pages shell stores profiles in one browser and does not provide account sign-in or remote sharing. A separate shared workspace is being prepared with Supabase Auth and PostgreSQL row-level security (RLS). The initial schema is in [supabase/migrations/001_private_journal.sql](supabase/migrations/001_private_journal.sql); setup notes are in [supabase/README.md](supabase/README.md). The migration has not been applied to a live project, and the shared sign-in/dashboard is not enabled yet.
+Open [the shared workspace](https://dane789.github.io/matwork/shared.html) for the initial email-link sign-in and role-aware dashboard. Parents create the family workspace and share one-time, seven-day access codes with the wrestler and coach. Wrestlers see their own lesson cues and at-home tasks, and can check off their practice. Parents see the whole record; coaches see the wrestler(s) whose access was granted and coach-assigned follow-through.
 
-Keep all records out of the public source. The public shell can be general and encouraging; private family, wrestler, coach, and lesson data belongs only in the authenticated service. See [360-workflow.md](360-workflow.md) for role behavior and privacy requirements.
+The shared page is not active until a Supabase project is created, the migration is applied, and `supabase-config.js` receives that project's URL and publishable key. Follow [supabase/README.md](supabase/README.md) before putting real records in it. Role views are enforced by database row-level security, not just by hiding parts of the page. Keep personal records out of the public GitHub source. Use first names or nicknames only; never put a service-role/secret key in this repository. See [360-workflow.md](360-workflow.md) for the stakeholder workflow and privacy requirements.
 
