@@ -321,6 +321,12 @@ $("#coach-capture-form").addEventListener("submit", (event) => {
       if (response.error) throw response.error;
       data = response.data;
     } catch (error) {
+      if (error?.context && typeof error.context.json === "function") {
+        try {
+          const detail = await error.context.json();
+          if (detail?.error) { notice(detail.error, "bad"); return; }
+        } catch { /* Fall through to the general function error below. */ }
+      }
       const details = `${error?.message || ""} ${error?.name || ""}`;
       if (/functionsfetcherror|failed to fetch|not found|404|503/i.test(details)) {
         notice("The secure lesson organizer is still being connected. Your note remains in this box and has not been saved. You can use the lesson form below for now.", "info");
