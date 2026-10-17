@@ -19,7 +19,7 @@ This is currently a browser-local journal rather than a multi-device synced acco
 
 ## Publish
 
-The included `.github/workflows/pages.yml` deploys the repository root to GitHub Pages when changes are pushed to `main`. In the repository's **Settings → Pages**, set the publishing source to **GitHub Actions**. GitHub's current official guidance uses the Pages artifact and deployment actions in this workflow.
+The public source repository is [dane789/matwork](https://github.com/dane789/matwork), and the live shell is [dane789.github.io/matwork](https://dane789.github.io/matwork/). GitHub Pages is configured to deploy the repository root with the included `.github/workflows/pages.yml` whenever changes are pushed to `main`.
 
 ## Files
 
