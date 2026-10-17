@@ -498,7 +498,7 @@ async function initialize() {
       await acceptInvite(code);
       history.replaceState({}, "", location.pathname);
     } else if (user) await loadIdentity();
-    else { showSignedOut(); notice("Use your Matwork email. Parents use the family account email; wrestlers and coaches use their invited email."); }
+    else { showSignedOut(); notice(""); }
     client.auth.onAuthStateChange((_event, newSession) => {
       session = newSession; user = newSession?.user || null;
       queueMicrotask(() => run(() => user ? loadIdentity() : showSignedOut()));
