@@ -9,16 +9,16 @@ This document defines the product behavior for a shared wrestler, parent, and co
 - Parent, wrestler, and coach access still needs end-to-end verification with separate accounts before real records are relied on.
 - The built-in Supabase email sender is limited to two auth emails per hour. Custom SMTP is needed for reliable onboarding beyond early testing.
 - The public coach capture and editable review interface is in GitHub Pages. Migration `002_coach_note_capture.sql` is applied; it stores source notes in a table available only to parents and assigned coaches and saves a reviewed lesson bundle atomically. Lesson items and approved checklist tasks preserve AI provenance.
-- The authenticated `coach-session-draft` Edge Function is deployed. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret has been added in Supabase. Its value is not stored in source or Drive. End-to-end generation is not yet verified because the desktop session is signed out and the feature requires an assigned coach session.
+- The authenticated `coach-session-draft` Edge Function is deployed with CORS preflight support for GitHub Pages and the local preview. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret is configured in Supabase. During the signed-in Jared pilot, the function reached OpenAI but received `429 credit_balance_exhausted`; the captured note was not saved. Add API credits before retrying.
 
-## Work that can continue before sign-in testing
+## Remaining pilot work
 
-The sign-in email limit blocks role-based verification and writing to the private family workspace; it does not block product planning or safe source work. Continue with changes that contain no wrestler-specific records:
+The owner currently has parent and pilot-coach views in one signed-in account. AI drafting is waiting for OpenAI API credits; the lesson text remains unsaved in the capture form.
 
-1. Review and refine the coach-to-wrestler-to-parent handoff and privacy copy.
-2. Prepare the first lesson as a private, reviewable draft, preserving exact coach cues separately from interpretation and suggested practice. Keep surnames, birthdays, and other identifying details out of public source and shared lesson notes.
-3. After sign-in is available, enter the lesson into the authenticated workspace and verify the parent, wrestler, and coach views using separate accounts where possible.
-4. Build and verify the next progress tools (training log and milestones) only after the existing role boundaries are confirmed, so new record types inherit the same access protections.
+1. Add OpenAI API credits and retry the first lesson draft. Keep it labeled as parent-entered pilot data until the actual coach confirms it.
+2. Preserve exact coach cues separately from parent interpretation and suggested practice. Keep surnames, birthdays, and other identifying details out of public source and shared lesson notes.
+3. Verify parent, wrestler, and coach views with separate accounts where possible.
+4. Build and verify training logs and milestones after the role boundaries are confirmed.
 5. Configure custom SMTP before inviting more families or relying on frequent email sign-ins.
 
 ## Role access
