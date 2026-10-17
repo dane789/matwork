@@ -30,3 +30,6 @@
   .local-draft-note p,.privacy-copy{font-size:12px}
 }
 
+@media(max-width:760px){.main-content{padding-top:48px}.topbar{padding-top:6px}}
+
+
