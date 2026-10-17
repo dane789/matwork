@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101c1c">
   <meta name="description" content="A shared, role-aware workspace for wrestling families, athletes, and coaches.">
   <title>Matwork — Shared workspace</title>
-  <link rel="stylesheet" href="shared.css?v=20261017-ux5">
+  <link rel="stylesheet" href="shared.css?v=20261017-ux6">
   <script src="supabase-config.js"></script>
-  <script type="module" src="shared.js?v=20261017-ux5"></script>
+  <script type="module" src="shared.js?v=20261017-ux6"></script>
 </head>
 <body>
   <header class="shared-header">
@@ -42,7 +42,7 @@
       <div id="role-summary" class="role-summary"></div>
       <div class="content-grid">
         <section class="card"><div class="card-heading"><div><div class="eyebrow">BUILD ON EACH SESSION</div><h3>Lesson notes</h3></div></div><div id="lesson-list" class="record-list"></div></section>
-        <section class="card"><div class="card-heading"><div><div class="eyebrow">SMALL REPS, BIG DIFFERENCE</div><h3>At-home practice</h3></div></div><div id="practice-list" class="record-list"></div></section>
+        <section class="card practice-card"><div class="card-heading"><div><div class="eyebrow">SMALL REPS, BIG DIFFERENCE</div><h3 id="practice-heading">At-home practice</h3></div></div><p id="practice-intro" class="muted practice-intro" hidden></p><div id="practice-progress" class="practice-progress" role="status" aria-live="polite" hidden><span id="practice-progress-label"></span><div class="practice-progress-track" aria-hidden="true"><span id="practice-progress-bar"></span></div></div><div id="practice-list" class="record-list"></div></section>
       </div>
       <section id="feedback-panel" class="feedback-grid" hidden>
         <section class="card" id="reflection-compose"><div class="eyebrow">CLOSE THE LOOP</div><h3 id="reflection-title">A quick check-in</h3><p class="muted" id="reflection-prompt"></p><form id="reflection-form" class="form-stack"><label>Date<input id="reflection-date" type="date" required></label><label id="reflection-content-label">What would you like the team to know?<textarea id="reflection-content" rows="4" maxlength="2000" required></textarea></label><label id="reflection-mood-label">How did the work feel?<select id="reflection-mood"><option value="">Choose if you like</option><option>Confident</option><option>Good effort</option><option>Still learning</option><option>Challenging</option><option>Need a reset</option></select></label><label>Who can see this?<select id="reflection-sharing"></select></label><button class="primary-button" type="submit">Share check-in</button></form></section>
