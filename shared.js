@@ -93,6 +93,7 @@ async function loadIdentity() {
   if (!available.includes(role)) role = available.includes("parent") ? "parent" : available[0];
   const roleSelect = $("#role-switch");
   roleSelect.replaceChildren(...available.map((entry) => { const option = document.createElement("option"); option.value = entry; option.textContent = roleLabels(entry); return option; }));
+  roleSelect.value = role;
   hide("#role-switch-wrap", available.length < 2);
   hide("#onboarding-panel"); hide("#workspace-panel", false);
   await loadWorkspace();
