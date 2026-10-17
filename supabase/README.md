@@ -5,7 +5,7 @@ This folder contains the initial schema for the private parent, wrestler, and co
 ## Current state
 
 - `migrations/001_private_journal.sql` is installed in the Matwork Supabase project. It defines the private records, role-aware row-level security (RLS), and one-time parent-created access codes for wrestler and coach accounts.
-- `migrations/003_coach_profiles.sql` adds private, account-linked coach display names. Apply it in the existing project before deploying the matching `shared.html` and `shared.js` changes. It does not expose coach emails.
+- `migrations/003_coach_profiles.sql` adds private, account-linked coach display names. It is installed in the active Matwork Supabase project. For a new project, apply it after the base schema and before using the matching `shared.html` and `shared.js` changes. It does not expose coach emails.
 - `shared.html` and its JavaScript/CSS provide the initial shared workspace: email-link sign-in, family setup, wrestler profiles, lesson notes, practice assignments, and wrestler completion tracking.
 - A sign-in link worked from the published shared page on a phone. Desktop sign-in and separate parent, wrestler, and coach permissions still need end-to-end verification before real records are relied on.
 - Supabase's built-in email sender is limited to two auth emails per hour. Configure custom SMTP before onboarding separate wrestler and coach accounts.
