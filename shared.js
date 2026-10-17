@@ -54,6 +54,7 @@ let selectedWrestler = "";
 let busy = false;
 let lessonDraft = null;
 let parentLessonDraft = null;
+const parentCaptureByAthlete = new Map();
 let coachProfiles = new Map();
 let ownCoachProfile = null;
 let coachProfilesAvailable = true;
@@ -86,6 +87,28 @@ function configReady() {
 function setBusy(value) {
   busy = value;
   document.querySelectorAll("button[type=submit]").forEach((button) => { button.disabled = value; });
+}
+
+function rememberParentCapture(wrestlerId) {
+  if (!wrestlerId) return;
+  parentCaptureByAthlete.set(wrestlerId, {
+    coachNotes: $("#parent-coach-notes").value,
+    observations: $("#parent-observations").value,
+    date: $("#parent-capture-date").value,
+    number: $("#parent-capture-number").value
+  });
+}
+
+function restoreParentCapture(wrestlerId) {
+  const saved = parentCaptureByAthlete.get(wrestlerId);
+  $("#parent-coach-notes").value = saved?.coachNotes || "";
+  $("#parent-observations").value = saved?.observations || "";
+  $("#parent-capture-date").value = saved?.date || new Date().toISOString().slice(0, 10);
+  $("#parent-capture-number").value = saved?.number || "";
+  $("#parent-share-coach").checked = false;
+  parentLessonDraft = null;
+  $("#parent-draft-review").replaceChildren();
+  hide("#parent-draft-review");
 }
 
 function showSignedOut() {
@@ -430,6 +453,7 @@ async function saveParentPlan(suggestions) {
   });
   if (error) throw error;
   parentLessonDraft = null;
+  parentCaptureByAthlete.delete(selectedWrestler);
   $("#parent-coach-notes").value = "";
   $("#parent-observations").value = "";
   $("#parent-capture-number").value = "";
@@ -498,8 +522,8 @@ $("#signin-form").addEventListener("submit", (event) => {
 });
 
 $("#sign-out").addEventListener("click", () => run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; showSignedOut(); notice("You’re signed out.", "good"); }));
-$("#role-switch").addEventListener("change", () => run(async () => { role = $("#role-switch").value; selectedWrestler = ""; $("#parent-share-coach").checked = false; parentLessonDraft = null; $("#parent-draft-review").replaceChildren(); hide("#parent-draft-review"); await loadWorkspace(); }));
-$("#athlete-picker").addEventListener("change", () => run(async () => { selectedWrestler = $("#athlete-picker").value; hide("#invite-result"); await loadRecords(); }));
+$("#role-switch").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); role = $("#role-switch").value; selectedWrestler = ""; $("#parent-share-coach").checked = false; parentLessonDraft = null; $("#parent-draft-review").replaceChildren(); hide("#parent-draft-review"); await loadWorkspace(); if (role === "parent" && selectedWrestler) restoreParentCapture(selectedWrestler); }));
+$("#athlete-picker").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); selectedWrestler = $("#athlete-picker").value; if (role === "parent") restoreParentCapture(selectedWrestler); hide("#invite-result"); await loadRecords(); }));
 
 $("#family-form").addEventListener("submit", (event) => {
   event.preventDefault();
