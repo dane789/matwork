@@ -2,9 +2,11 @@ const $ = (selector) => document.querySelector(selector);
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const shortDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Date not set";
 
-function renderLessonItem(item, coachName) {
+function renderLessonItem(item, coachName, coachSource) {
   const attribution = coachName ? ` · ${esc(coachName)}` : "";
-  const origin = item.ai_assisted ? "AI ORGANIZED · COACH APPROVED" : "COACH NOTES";
+  const origin = item.ai_assisted
+    ? coachSource ? "AI ORGANIZED · COACH APPROVED" : "PARENT NOTES · AI ORGANIZED"
+    : coachSource ? "COACH NOTES" : "PARENT NOTES";
   const label = `${origin} · ${esc(item.kind.replaceAll("_", " "))}${attribution}`;
   const content = item.content || "";
   const objective = content.match(/(?:^|\n)Objective:\s*([\s\S]*?)(?=\nKey coaching points:|\nLesson takeaway:|\nCoach cue wording:|$)/i)?.[1]?.trim();
@@ -214,7 +216,7 @@ async function loadRecords() {
     const notes = items.filter((item) => item.lesson_id === lesson.id);
     const coachName = coachProfiles.get(lesson.created_by);
     const instructor = lesson.instructor_label === "Coach" ? (coachName || "Coach") : lesson.instructor_label;
-    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${instructor ? ` · Coach: ${esc(instructor)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => renderLessonItem(item, coachProfiles.get(item.authored_by))).join("")}</article>`;
+    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${instructor ? ` · Coach: ${esc(instructor)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => renderLessonItem(item, coachProfiles.get(item.authored_by), lesson.instructor_label === "Coach")).join("")}</article>`;
   }).join("") : `<div class="empty-state">No lessons have been recorded here yet.</div>`;
   $("#practice-list").innerHTML = visibleAssignments.length ? visibleAssignments.map((assignment) => {
     const event = latest.get(assignment.id);
