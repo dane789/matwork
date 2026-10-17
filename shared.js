@@ -1,0 +1,279 @@
+const $ = (selector) => document.querySelector(selector);
+const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+const shortDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Date not set";
+const notice = (message, kind = "info") => { const node = $("#notice"); node.textContent = message; node.dataset.kind = kind; node.hidden = !message; };
+const hide = (selector, value = true) => { $(selector).hidden = value; };
+let client;
+let session;
+let user;
+let memberships = [];
+let coachAssignments = [];
+let wrestlers = [];
+let role = "";
+let selectedWrestler = "";
+let busy = false;
+
+function configReady() {
+  const cfg = window.MATWORK_SUPABASE_CONFIG || {};
+  return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url || "") && /^(sb_publishable_|eyJ)/.test(cfg.publishableKey || "");
+}
+
+function setBusy(value) {
+  busy = value;
+  document.querySelectorAll("button[type=submit]").forEach((button) => { button.disabled = value; });
+}
+
+function showSignedOut() {
+  session = null; user = null;
+  hide("#signin-panel", false); hide("#onboarding-panel"); hide("#workspace-panel"); hide("#sign-out");
+  $("#account-label").textContent = "";
+}
+
+function roleLabels(available) {
+  return { parent: "Parent dashboard", wrestler: "Wrestler view", coach: "Coach workspace" }[available];
+}
+
+async function loadIdentity() {
+  if (!user) return showSignedOut();
+  $("#account-label").textContent = user.email || "Signed in";
+  hide("#signin-panel"); hide("#sign-out", false);
+  const [{ data: memberRows, error: memberError }, { data: coachRows, error: coachError }] = await Promise.all([
+    client.from("family_memberships").select("family_id,role,wrestler_id").eq("user_id", user.id),
+    client.from("coach_assignments").select("family_id,wrestler_id,revoked_at").eq("coach_user_id", user.id).is("revoked_at", null)
+  ]);
+  if (memberError || coachError) throw memberError || coachError;
+  memberships = memberRows || [];
+  coachAssignments = coachRows || [];
+  const available = [];
+  if (memberships.some((item) => item.role === "parent")) available.push("parent");
+  if (memberships.some((item) => item.role === "wrestler")) available.push("wrestler");
+  if (coachAssignments.length) available.push("coach");
+  if (!available.length) {
+    hide("#workspace-panel"); hide("#onboarding-panel", false);
+    notice("You’re signed in. Create a parent workspace or use a one-time access code from a parent.", "good");
+    return;
+  }
+  if (!available.includes(role)) role = available.includes("parent") ? "parent" : available[0];
+  const roleSelect = $("#role-switch");
+  roleSelect.replaceChildren(...available.map((entry) => { const option = document.createElement("option"); option.value = entry; option.textContent = roleLabels(entry); return option; }));
+  hide("#role-switch-wrap", available.length < 2);
+  hide("#onboarding-panel"); hide("#workspace-panel", false);
+  await loadWorkspace();
+}
+
+async function loadWorkspace() {
+  const ids = role === "parent"
+    ? memberships.filter((item) => item.role === "parent").map((item) => item.family_id)
+    : role === "wrestler"
+      ? memberships.filter((item) => item.role === "wrestler").map((item) => item.wrestler_id)
+      : coachAssignments.map((item) => item.wrestler_id);
+  let query = client.from("wrestlers").select("id,family_id,first_name,active").eq("active", true);
+  if (role === "parent") query = query.in("family_id", ids);
+  else query = query.in("id", ids);
+  const { data, error } = await query.order("created_at", { ascending: true });
+  if (error) throw error;
+  wrestlers = data || [];
+  const title = { parent: "Parent dashboard", wrestler: "Wrestler view", coach: "Coach workspace" }[role];
+  const intro = {
+    parent: "Everything for your wrestler, including lesson details and parent-only notes.",
+    wrestler: "Your focus, practice checklist, lesson cues, and progress.",
+    coach: "Assigned athletes, coaching notes, and at-home practice follow-through."
+  }[role];
+  $("#role-title").textContent = title;
+  $("#role-eyebrow").textContent = role === "parent" ? "FAMILY VIEW" : role === "wrestler" ? "WRESTLER VIEW" : "COACH VIEW";
+  $("#role-summary").textContent = intro;
+  const ownedFamilies = memberships.filter((item) => item.role === "parent").map((item) => item.family_id);
+  hide("#athlete-setup", role === "parent" && ownedFamilies.length === 0);
+  hide("#athlete-picker-card", wrestlers.length === 0);
+  hide("#author-panel", role === "wrestler" || wrestlers.length === 0);
+  hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
+  if (!wrestlers.length) {
+    $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first wrestler profile to start the journal." : "No wrestler profile is linked to this account yet. Ask a parent for an access code."}</div>`;
+    $("#practice-list").innerHTML = "";
+    if (role === "parent") hide("#athlete-setup", false);
+    return;
+  }
+  if (!wrestlers.some((item) => item.id === selectedWrestler)) selectedWrestler = wrestlers[0].id;
+  const picker = $("#athlete-picker");
+  picker.replaceChildren(...wrestlers.map((wrestler) => { const option = document.createElement("option"); option.value = wrestler.id; option.textContent = wrestler.first_name || "Wrestler"; return option; }));
+  picker.value = selectedWrestler;
+  await loadRecords();
+}
+
+async function loadRecords() {
+  const athleteId = selectedWrestler;
+  if (!athleteId) return;
+  const [lessonResult, itemResult, assignmentResult, eventResult] = await Promise.all([
+    client.from("lessons").select("id,lesson_number,lesson_date,focus,instructor_label,created_by").eq("wrestler_id", athleteId).order("lesson_date", { ascending: false }),
+    client.from("lesson_items").select("id,lesson_id,wrestler_id,kind,content,audience,authored_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: true }),
+    client.from("practice_assignments").select("id,wrestler_id,lesson_id,title,instructions,source,audience,due_date,active,created_at").eq("wrestler_id", athleteId).eq("active", true).order("created_at", { ascending: false }),
+    client.from("checklist_events").select("assignment_id,completed,recorded_at,note").eq("wrestler_id", athleteId).order("recorded_at", { ascending: false })
+  ]);
+  const error = [lessonResult, itemResult, assignmentResult, eventResult].find((result) => result.error)?.error;
+  if (error) throw error;
+  const lessons = lessonResult.data || [];
+  const items = itemResult.data || [];
+  const assignments = assignmentResult.data || [];
+  const latest = new Map();
+  for (const event of eventResult.data || []) if (!latest.has(event.assignment_id)) latest.set(event.assignment_id, event);
+  $("#lesson-list").innerHTML = lessons.length ? lessons.map((lesson) => {
+    const notes = items.filter((item) => item.lesson_id === lesson.id);
+    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${lesson.instructor_label ? ` · ${esc(lesson.instructor_label)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => `<div class="record-label ${item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : ""}">${esc(item.kind.replaceAll("_", " "))}</div><p>${esc(item.content)}</p>`).join("")}</article>`;
+  }).join("") : `<div class="empty-state">No lessons have been recorded here yet.</div>`;
+  $("#practice-list").innerHTML = assignments.length ? assignments.map((assignment) => {
+    const event = latest.get(assignment.id);
+    const checked = Boolean(event?.completed);
+    const canComplete = role === "wrestler";
+    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION"} · ${assignment.audience === "wrestler" ? "WRESTLER" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
+  }).join("") : `<div class="empty-state">No active practice items yet. A parent or coach can add a clear next step after a lesson.</div>`;
+  const completed = assignments.filter((assignment) => latest.get(assignment.id)?.completed).length;
+  const athlete = wrestlers.find((item) => item.id === athleteId);
+  $("#role-summary").textContent = `${athlete?.first_name || "Wrestler"} · ${introForRole()}${role === "coach" ? ` ${completed} of ${assignments.length} coach-assigned items marked complete.` : role === "parent" ? ` ${completed} of ${assignments.length} practice items marked complete.` : ""}`;
+}
+
+function introForRole() { return { parent: "Full family record.", wrestler: "Your work, one step at a time.", coach: "Assigned coaching view." }[role]; }
+
+async function run(action) {
+  if (busy) return;
+  setBusy(true);
+  try { await action(); }
+  catch (error) { notice(error?.message || "Something went wrong. Please try again.", "bad"); }
+  finally { setBusy(false); }
+}
+
+async function acceptInvite(code) {
+  const { error } = await client.rpc("accept_access_invite", { p_invite_code: code.trim() });
+  if (error) throw error;
+  $("#invite-code").value = "";
+  notice("You’re connected. Your workspace is ready.", "good");
+  await loadIdentity();
+}
+
+async function initialize() {
+  if (!configReady()) {
+    hide("#signin-panel"); hide("#onboarding-panel"); hide("#workspace-panel");
+    notice("Shared sign-in is ready for setup. Add your Supabase Project URL and publishable key to supabase-config.js, then apply the database migration before entering any wrestler records.");
+    return;
+  }
+  try {
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    const config = window.MATWORK_SUPABASE_CONFIG;
+    client = createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    session = data.session;
+    user = session?.user || null;
+    if (user && new URLSearchParams(location.search).has("invite")) {
+      const code = new URLSearchParams(location.search).get("invite");
+      await acceptInvite(code);
+      history.replaceState({}, "", location.pathname);
+    } else if (user) await loadIdentity();
+    else { showSignedOut(); notice("Use the email address your parent or family uses for this workspace."); }
+    client.auth.onAuthStateChange((_event, newSession) => {
+      session = newSession; user = newSession?.user || null;
+      queueMicrotask(() => run(() => user ? loadIdentity() : showSignedOut()));
+    });
+  } catch (error) {
+    notice(`Shared workspace could not start: ${error?.message || "connection error"}`, "bad");
+  }
+}
+
+$("#signin-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const email = $("#signin-email").value.trim();
+    const invite = new URLSearchParams(location.search).get("invite");
+    const redirect = new URL(location.pathname, location.origin);
+    if (invite) redirect.searchParams.set("invite", invite);
+    const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect.toString(), shouldCreateUser: true } });
+    if (error) throw error;
+    notice("Check your inbox for a sign-in link. Open it on this device to continue.", "good");
+  });
+});
+
+$("#sign-out").addEventListener("click", () => run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; showSignedOut(); notice("You’re signed out.", "good"); }));
+$("#role-switch").addEventListener("change", () => run(async () => { role = $("#role-switch").value; selectedWrestler = ""; await loadWorkspace(); }));
+$("#athlete-picker").addEventListener("change", () => run(async () => { selectedWrestler = $("#athlete-picker").value; hide("#invite-result"); await loadRecords(); }));
+
+$("#family-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const { error } = await client.rpc("create_family", { family_label: $("#family-label").value.trim() || "My family" });
+    if (error) throw error;
+    role = "parent";
+    notice("Parent workspace created. Add the wrestler profile next.", "good");
+    await loadIdentity();
+  });
+});
+
+$("#wrestler-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const familyId = memberships.find((item) => item.role === "parent")?.family_id;
+    if (!familyId) throw new Error("Create the parent workspace first.");
+    const { data, error } = await client.rpc("create_wrestler", { target_family: familyId, wrestler_first_name: $("#wrestler-first-name").value.trim() });
+    if (error) throw error;
+    $("#wrestler-first-name").value = "";
+    selectedWrestler = data;
+    notice("Wrestler profile added.", "good");
+    await loadWorkspace();
+  });
+});
+
+$("#accept-invite-form").addEventListener("submit", (event) => { event.preventDefault(); run(() => acceptInvite($("#invite-code").value)); });
+
+document.querySelectorAll("[data-create-invite]").forEach((button) => button.addEventListener("click", () => run(async () => {
+  const { data, error } = await client.rpc("create_access_invite", { target_wrestler: selectedWrestler, invite_role: button.dataset.createInvite });
+  if (error) throw error;
+  const node = $("#invite-result"); node.hidden = false;
+  node.innerHTML = `<b>${button.dataset.createInvite === "coach" ? "Coach" : "Wrestler"} access code</b><code>${esc(data)}</code>Share this one-time code privately. It expires in seven days and can be used once.`;
+  notice("Access code created. Share it only with the intended person.", "good");
+})));
+
+$("#lesson-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const athlete = wrestlers.find((item) => item.id === selectedWrestler);
+    const numberValue = $("#lesson-number").value;
+    const { data: lesson, error } = await client.from("lessons").insert({ wrestler_id: selectedWrestler, lesson_number: numberValue ? Number(numberValue) : null, lesson_date: $("#lesson-date").value, focus: $("#lesson-focus").value.trim(), instructor_label: role === "coach" ? "Coach" : null, created_by: user.id }).select("id").single();
+    if (error) throw error;
+    const rows = [];
+    const cues = $("#lesson-cues").value.trim();
+    const observations = $("#lesson-observations").value.trim();
+    const parentNotes = $("#lesson-parent-notes").value.trim();
+    if (cues) rows.push({ lesson_id: lesson.id, wrestler_id: selectedWrestler, kind: "coach_cue", content: cues, audience: role === "coach" ? ["coach", "wrestler"] : ["parent", "wrestler"], authored_by: user.id });
+    if (observations) rows.push({ lesson_id: lesson.id, wrestler_id: selectedWrestler, kind: role === "coach" ? "coach_observation" : "development_priority", content: observations, audience: role === "coach" ? ["coach", "wrestler"] : ["parent", "wrestler"], authored_by: user.id });
+    if (parentNotes && role === "parent") rows.push({ lesson_id: lesson.id, wrestler_id: selectedWrestler, kind: "parent_interpretation", content: parentNotes, audience: ["parent"], authored_by: user.id });
+    if (rows.length) { const { error: itemError } = await client.from("lesson_items").insert(rows); if (itemError) throw itemError; }
+    event.target.reset();
+    $("#lesson-date").value = new Date().toISOString().slice(0, 10);
+    notice(`Lesson saved for ${athlete?.first_name || "wrestler"}.`, "good");
+    await loadRecords();
+  });
+});
+
+$("#assignment-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const { error } = await client.from("practice_assignments").insert({ wrestler_id: selectedWrestler, title: $("#assignment-title").value.trim(), instructions: $("#assignment-instructions").value.trim(), source: role === "coach" ? "coach" : "parent", audience: $("#assignment-audience").value, created_by: user.id, due_date: $("#assignment-due").value || null });
+    if (error) throw error;
+    event.target.reset();
+    notice("Practice item added with its source and intended audience.", "good");
+    await loadRecords();
+  });
+});
+
+$("#practice-list").addEventListener("change", (event) => {
+  const checkbox = event.target.closest("[data-complete]");
+  if (!checkbox || role !== "wrestler") return;
+  run(async () => {
+    const { error } = await client.from("checklist_events").insert({ assignment_id: checkbox.dataset.complete, wrestler_id: selectedWrestler, completed: checkbox.checked, note: "", recorded_by: user.id });
+    if (error) throw error;
+    await loadRecords();
+    notice(checkbox.checked ? "Practice completion saved." : "Practice marked as not complete yet.", "good");
+  });
+});
+
+$("#lesson-date").value = new Date().toISOString().slice(0, 10);
+initialize();
+
