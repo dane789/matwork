@@ -6,6 +6,8 @@ This folder contains the initial schema for the private parent, wrestler, and co
 
 - `migrations/001_private_journal.sql` is installed in the Matwork Supabase project. It defines the private records, role-aware row-level security (RLS), and one-time parent-created access codes for wrestler and coach accounts.
 - `migrations/003_coach_profiles.sql` adds private, account-linked coach display names. It is installed in the active Matwork Supabase project. For a new project, apply it after the base schema and before using the matching `shared.html` and `shared.js` changes. It does not expose coach emails.
+- `migrations/004_ai_usage_limits.sql` adds private server-enforced quotas for optional AI lesson drafts. Pilot defaults are 100 drafts per Matwork project per month and 20 per coach per month. It is prepared in source but not yet applied.
+- `migrations/005_reflection_sharing.sql` lets parent and wrestler check-ins carry explicit author and coach-sharing choices. It is prepared in source but not yet applied. The page detects the missing migration and keeps the rest of the workspace usable while hiding the new form.
 - `migrations/004_ai_usage_limits.sql` adds private server-enforced quotas for optional AI lesson drafts. Pilot defaults are 100 drafts per Matwork project per month and 20 per coach per month. Apply it before deploying the updated function source. Project owners can adjust the limits in Supabase SQL Editor; coaches cannot read or change them.
 - `functions/coach-session-draft/index.ts` is deployed as the authenticated `coach-session-draft` Edge Function. It validates the coach assignment before sending lesson notes to the OpenAI Responses API, and returns an editable draft without saving it. The function handles browser CORS preflight requests for the GitHub Pages origin and local preview.
 - The function is deployed, but its live OpenAI request currently returns `429 credit_balance_exhausted`. Add API credits before retrying. No OpenAI secret belongs in this repository or in Drive.
@@ -25,7 +27,7 @@ This folder contains the initial schema for the private parent, wrestler, and co
 5. In Auth email settings, ensure the sign-in email link directs back to the requested redirect URL. Email-link sign-in is used so families do not need passwords for the first version.
 6. Publish the changed files. A parent signs in, creates a family and first-name wrestler profile, then makes a one-time coach access code and wrestler access code. Each code expires after seven days and is single-use.
 7. Before relying on it, sign in separately as parent, wrestler, and coach. Confirm wrestler views do not show parent notes and coach access is limited to the assigned wrestler.
-8. For an existing project, apply later migrations in sequence. Migration `003_coach_profiles.sql` must be applied before the coach profile UI is used.
+8. For an existing project, apply later migrations in sequence. Migration `003_coach_profiles.sql` supports coach-name attribution, `004_ai_usage_limits.sql` is required before deploying the updated AI function, and `005_reflection_sharing.sql` enables parent/wrestler check-ins shared with a coach.
 
 The Project URL and publishable key are intended for browser use. **Never put a `service_role` or `secret` key in website files, chat, or GitHub.** Those keys bypass RLS. Do not enter a child's birthday, surname, school, location, schedule, or contact details.
 
