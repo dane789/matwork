@@ -10,12 +10,13 @@ This document defines the product behavior for a shared wrestler, parent, and co
 - The built-in Supabase email sender is limited to two auth emails per hour. Custom SMTP is needed for reliable onboarding beyond early testing.
 - The public coach capture and editable review interface is in GitHub Pages. Migration `002_coach_note_capture.sql` is applied; it stores source notes in a table available only to parents and assigned coaches and saves a reviewed lesson bundle atomically. Lesson items and approved checklist tasks preserve AI provenance.
 - The authenticated `coach-session-draft` Edge Function is deployed with CORS preflight support for GitHub Pages and the local preview. The owner approved sending coach notes to OpenAI for formatting, and the `OPENAI_API_KEY` Function secret is configured in Supabase. During the signed-in Jared pilot, the function reached OpenAI but received `429 credit_balance_exhausted`; the captured note was not saved. Add API credits before retrying.
+- AI is optional: the coach can write structured notes or use free device keyboard dictation without an API call. The function sends only the current note, has no automatic retry, and its source now caps output at 1,600 tokens; redeploy is needed for that cap to take effect. A lower-cost nano model can be considered after a coach checks its accuracy on an approved sample.
 
 ## Remaining pilot work
 
 The owner currently has parent and pilot-coach views in one signed-in account. AI drafting is waiting for OpenAI API credits; the lesson text remains unsaved in the capture form.
 
-1. Add OpenAI API credits and retry the first lesson draft. Keep it labeled as parent-entered pilot data until the actual coach confirms it.
+1. Keep the note in the capture form and use the manual workflow until the family chooses to add a small API credit balance; no API retry should happen automatically. If credits are added later, keep the note labeled as parent-entered pilot data until the actual coach confirms it.
 2. Preserve exact coach cues separately from parent interpretation and suggested practice. Keep surnames, birthdays, and other identifying details out of public source and shared lesson notes.
 3. Verify parent, wrestler, and coach views with separate accounts where possible.
 4. Build and verify training logs and milestones after the role boundaries are confirmed.
@@ -84,6 +85,15 @@ After submission, AI formats the note into a structured draft with these section
 - **Parent support:** practical ways to encourage the wrestler and help reinforce the stated focus, without asking the parent to act as a coach.
 - **Next lesson ideas:** optional suggestions, clearly labeled as unconfirmed.
 - **Needs coach confirmation:** missing or unclear details, rather than guessed facts.
+
+### Keep AI costs low
+
+- Make AI optional. A coach can fill the same short fields, use the phone keyboard's built-in dictation, and save without calling an AI service.
+- Send only the current lesson note. Do not send the wrestler's full journal or earlier lessons for each draft.
+- Make one request per submitted note, with no automatic retry, background summary, or second “polish” pass. Preserve the note if the request fails so the coach can continue manually.
+- Keep the generated draft concise and cap the output. The current source caps it at 1,600 tokens; the deployed function needs redeployment for this limit to apply.
+- Consider the lower-priced `gpt-5.4-nano` for extraction only after a coach reviews its accuracy against an approved sample. Keep human approval regardless of model.
+- Set a small manual API credit budget and turn off automatic recharge. Show the coach when AI is unavailable and leave manual note entry available.
 
 Keep the original coach note with the approved lesson record so the formatted version remains traceable. AI output is a draft: the coach can edit each section, remove suggestions, and approve the final record before it is shared. Do not save or notify families from an unreviewed draft.
 
