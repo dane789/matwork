@@ -10,6 +10,7 @@ create type public.lesson_item_kind as enum (
 create type public.assignment_source as enum ('coach', 'parent');
 create type public.assignment_audience as enum ('wrestler', 'parent');
 create type public.reflection_audience as enum ('parent', 'wrestler', 'coach');
+create type public.invite_role as enum ('wrestler', 'coach');
 
 create table public.families (
   id uuid primary key default gen_random_uuid(),
@@ -398,7 +399,9 @@ create policy checklist_read_by_role on public.checklist_events for select to au
     )));
 create policy checklist_insert_family on public.checklist_events for insert to authenticated
   with check (recorded_by = (select auth.uid()) and (public.is_parent_for(wrestler_id) or public.is_wrestler_for(wrestler_id))
-    and exists (select 1 from public.practice_assignments a where a.id = checklist_events.assignment_id and a.wrestler_id = checklist_events.wrestler_id));
+    and exists (select 1 from public.practice_assignments a
+      where a.id = checklist_events.assignment_id and a.wrestler_id = checklist_events.wrestler_id
+        and (public.is_parent_for(wrestler_id) or a.audience = 'wrestler')));
 
 create policy sessions_read_shared on public.training_sessions for select to authenticated
   using (public.is_parent_for(wrestler_id) or public.is_wrestler_for(wrestler_id)
@@ -438,4 +441,74 @@ create policy reflections_delete_family on public.reflections for delete to auth
 revoke insert, update, delete on public.family_memberships, public.coach_assignments from authenticated;
 revoke insert, delete on public.families from authenticated;
 revoke insert, delete on public.wrestlers from authenticated;
+
+-- One-time, seven-day invitation codes let parents connect a wrestler or coach
+-- without exposing email addresses or requiring anyone to copy a user UUID.
+create table public.access_invites (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references public.families(id) on delete cascade,
+  wrestler_id uuid not null,
+  invite_role public.invite_role not null,
+  invite_code text not null unique,
+  invited_by uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '7 days'),
+  claimed_by uuid references auth.users(id) on delete set null,
+  claimed_at timestamptz,
+  constraint access_invite_wrestler_family_fk
+    foreign key (wrestler_id, family_id) references public.wrestlers(id, family_id) on delete cascade
+);
+alter table public.access_invites enable row level security;
+revoke all on public.access_invites from public, anon, authenticated;
+
+create function public.create_access_invite(target_wrestler uuid, invite_role public.invite_role)
+returns text language plpgsql security definer set search_path = '' as $$
+declare target_family uuid; new_code text;
+begin
+  select family_id into target_family from public.wrestlers where id = target_wrestler;
+  if target_family is null or not public.is_parent_for_family(target_family) then
+    raise exception 'Parent access required';
+  end if;
+  new_code := replace(gen_random_uuid()::text, '-', '');
+  insert into public.access_invites(family_id, wrestler_id, invite_role, invite_code, invited_by)
+  values (target_family, target_wrestler, invite_role, new_code, (select auth.uid()));
+  return new_code;
+end;
+$$;
+
+create function public.accept_access_invite(p_invite_code text)
+returns void language plpgsql security definer set search_path = '' as $$
+declare invite_row public.access_invites%rowtype; current_user_id uuid;
+begin
+  current_user_id := (select auth.uid());
+  if current_user_id is null then raise exception 'Sign-in required'; end if;
+  select * into invite_row from public.access_invites i
+  where i.invite_code = lower(trim(p_invite_code))
+    and i.claimed_at is null and i.expires_at > now()
+  for update;
+  if not found then raise exception 'This code is invalid, expired, or already used'; end if;
+
+  if invite_row.invite_role = 'wrestler' then
+    insert into public.family_memberships(family_id, user_id, role, wrestler_id)
+    values (invite_row.family_id, current_user_id, 'wrestler', invite_row.wrestler_id)
+    on conflict do nothing;
+    if not exists (select 1 from public.family_memberships m
+      where m.user_id = current_user_id and m.wrestler_id = invite_row.wrestler_id and m.role = 'wrestler') then
+      raise exception 'A wrestler login is already linked to this profile';
+    end if;
+  else
+    insert into public.coach_assignments(family_id, wrestler_id, coach_user_id, granted_by)
+    values (invite_row.family_id, invite_row.wrestler_id, current_user_id, invite_row.invited_by)
+    on conflict (wrestler_id, coach_user_id) where revoked_at is null do nothing;
+  end if;
+
+  update public.access_invites set claimed_by = current_user_id, claimed_at = now()
+  where id = invite_row.id;
+end;
+$$;
+
+revoke all on function public.create_access_invite(uuid, public.invite_role) from public, anon;
+revoke all on function public.accept_access_invite(text) from public, anon;
+grant execute on function public.create_access_invite(uuid, public.invite_role) to authenticated;
+grant execute on function public.accept_access_invite(text) to authenticated;
 
