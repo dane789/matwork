@@ -107,8 +107,8 @@ async function loadRecords() {
   if (!athleteId) return;
   const [lessonResult, itemResult, assignmentResult, eventResult] = await Promise.all([
     client.from("lessons").select("id,lesson_number,lesson_date,focus,instructor_label,created_by").eq("wrestler_id", athleteId).order("lesson_date", { ascending: false }),
-    client.from("lesson_items").select("id,lesson_id,wrestler_id,kind,content,audience,authored_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: true }),
-    client.from("practice_assignments").select("id,wrestler_id,lesson_id,title,instructions,source,audience,due_date,active,created_at").eq("wrestler_id", athleteId).eq("active", true).order("created_at", { ascending: false }),
+    client.from("lesson_items").select("id,lesson_id,wrestler_id,kind,content,audience,authored_by,created_at,ai_assisted").eq("wrestler_id", athleteId).order("created_at", { ascending: true }),
+    client.from("practice_assignments").select("id,wrestler_id,lesson_id,title,instructions,source,coach_origin,audience,due_date,active,created_at").eq("wrestler_id", athleteId).eq("active", true).order("created_at", { ascending: false }),
     client.from("checklist_events").select("assignment_id,completed,recorded_at,note").eq("wrestler_id", athleteId).order("recorded_at", { ascending: false })
   ]);
   const error = [lessonResult, itemResult, assignmentResult, eventResult].find((result) => result.error)?.error;
@@ -120,13 +120,14 @@ async function loadRecords() {
   for (const event of eventResult.data || []) if (!latest.has(event.assignment_id)) latest.set(event.assignment_id, event);
   $("#lesson-list").innerHTML = lessons.length ? lessons.map((lesson) => {
     const notes = items.filter((item) => item.lesson_id === lesson.id);
-    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${lesson.instructor_label ? ` · ${esc(lesson.instructor_label)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => `<div class="record-label ${item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : ""}">${esc(item.kind.replaceAll("_", " "))}</div><p>${esc(item.content)}</p>`).join("")}</article>`;
+    return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${lesson.instructor_label ? ` · ${esc(lesson.instructor_label)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => `<div class="record-label ${item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : ""}">${item.ai_assisted ? "AI ORGANIZED · COACH APPROVED · " : ""}${esc(item.kind.replaceAll("_", " "))}</div><p>${esc(item.content)}</p>`).join("")}</article>`;
   }).join("") : `<div class="empty-state">No lessons have been recorded here yet.</div>`;
   $("#practice-list").innerHTML = assignments.length ? assignments.map((assignment) => {
     const event = latest.get(assignment.id);
     const checked = Boolean(event?.completed);
     const canComplete = role === "wrestler";
-    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION"} · ${assignment.audience === "wrestler" ? "WRESTLER" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
+    const origin = assignment.coach_origin === "ai_suggestion_approved" ? "AI SUGGESTION · COACH APPROVED" : assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION";
+    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin} · ${assignment.audience === "wrestler" ? "WRESTLER" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
   }).join("") : `<div class="empty-state">No active practice items yet. A parent or coach can add a clear next step after a lesson.</div>`;
   const completed = assignments.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const athlete = wrestlers.find((item) => item.id === athleteId);
@@ -161,7 +162,8 @@ async function saveApprovedDraft(tasks) {
     selected: node.querySelector(`[data-task-selected="${index}"]`).checked,
     title: node.querySelector(`[data-task-title="${index}"]`).value.trim(),
     instructions: node.querySelector(`[data-task-instructions="${index}"]`).value.trim(),
-    audience: node.querySelector(`[data-task-audience="${index}"]`).value
+    audience: node.querySelector(`[data-task-audience="${index}"]`).value,
+    coach_origin: tasks[index].selected ? "coach_stated" : "ai_suggestion_approved"
   })).filter((task) => task.selected && task.title);
   const payload = {
     p_wrestler_id: selectedWrestler,
