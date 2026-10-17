@@ -35,11 +35,19 @@ Wrestlers must not receive parent-only notes, parent recommendations, or parent 
 
 The wrestler view is the athlete's home base: make the next action obvious, keep language direct and encouraging, celebrate completed work, and let the wrestler see how today's effort connects to the next lesson. A wrestler should only see their own assignments, coach-facing cues, personal training entries, and milestones. Parent-only recommendations and dashboard notes stay out of the view and its network responses.
 
-Coaches need a focused follow-through view for their assigned wrestlers. It should show whether coach-assigned checklist items were completed, when activity was logged, and any short wrestler note shared with the coach. Activity should flow back to the coach who assigned the work, while the parent retains the full family view. Do not create attendance surveillance or expose a wrestler's activity to unrelated coaches.
+Coaches need a focused follow-through view for their assigned wrestlers. It should show whether coach-assigned checklist items were completed, when activity was logged, and any short wrestler note shared with the coach. Parents should be able to add observations, expectations, or concerns from their own perspective and deliberately share selected items with the coach. Keep private family notes separate from parent-to-coach feedback. Attribute each entry to its author and viewpoint; a parent's interpretation must never appear as a coach's technical assessment. The coach can use the wrestler and parent perspectives, plus activity since the last session, to prepare the next lesson and reply with clear follow-up. Do not create attendance surveillance or expose a wrestler's activity to unrelated coaches.
 
 Explore a positive, transparent **Momentum** signal (working name) based on actions the wrestler chooses to log: coach-assigned work completed, wrestling practices/private lessons attended, drilling, and strength sessions. Show the underlying activity counts and period so the number is understandable. Do not infer effort from missing data, count rest or recovery days against the athlete, rank wrestlers, or describe the signal as a measure of motivation, talent, or character. The wrestler should be able to see and understand the same signal the parent and assigned coach see.
 
 Current implementation includes a role-specific wrestler view and coach visibility into assignment completion events. A dedicated training log, milestone feed, attendance check-ins, and Momentum summary still need to be designed and implemented; the source migration `003_coach_profiles.sql` separately enables account-linked coach names for attribution.
+
+### Feedback loop
+
+1. Coach records a lesson and coach-authored next steps.
+2. Wrestler sees a focused action plan, records practice/checklist completion, and can share a short reflection with the coach.
+3. Parent can record their own perspective and expectations privately, then explicitly select what to share with the coach.
+4. Coach sees only feedback shared with them, attributed to the wrestler or parent, alongside completed work. They use it to shape the next lesson and return an updated plan.
+5. Parent has the full family history; wrestler sees their own training story; coaches only see assigned wrestlers and intentionally shared inputs.
 
 ## Lesson record structure
 
