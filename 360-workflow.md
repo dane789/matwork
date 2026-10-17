@@ -102,6 +102,8 @@ OpenAI's API does not use API inputs and outputs for model training by default, 
 
 Matwork turns a short note into a clear handoff for the whole support team: the wrestler knows what to practice, the parent knows how to help, and the coach can review checklist follow-through before the next lesson. The coach remains in control of what is attributed to them and what is shared.
 
+The coach-facing business value is a polished, organized service with less after-session administration. A coach can spend more time teaching and training, while families see the lesson's value and know how to continue the work. A useful feedback loop may make planning the next private session easier and more timely. Future paid coach plans could center on individual athlete workspaces, lesson records, and follow-through tools; pricing and packaging should follow pilot feedback rather than be assumed in advance.
+
 ## Assignment and checklist behavior
 
 Every assignment stores a description, steps, intended audience (`wrestler` or `parent`), creator role, source (`coach` or `parent`), status, and timestamps. A coach can create separate tasks for the wrestler and parent. The wrestler can mark only wrestler tasks complete and add a short note. The parent and assigned coach can see completion history. Changing a completed task must retain its prior state in the audit history.
