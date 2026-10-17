@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101c1c">
+  <meta name="description" content="A shared, role-aware workspace for wrestling families, athletes, and coaches.">
+  <title>Matwork — Shared workspace</title>
+  <link rel="stylesheet" href="shared.css">
+  <script src="supabase-config.js"></script>
+  <script type="module" src="shared.js"></script>
+</head>
+<body>
+  <header class="shared-header">
+    <a class="brand" href="index.html" aria-label="Matwork home"><span class="brand-mark">M</span><span>MATWORK<small>THE LONG GAME</small></span></a>
+    <div class="header-actions"><span id="account-label" class="account-label"></span><button id="sign-out" class="quiet-button" hidden>Sign out</button></div>
+  </header>
+  <main class="shared-main">
+    <div class="shared-heading"><div class="eyebrow">A TEAM AROUND THE JOURNEY</div><h1>Shared workspace<span>.</span></h1><p>One wrestler’s progress, with the right view for each person supporting it.</p></div>
+    <div id="notice" class="notice" role="status" aria-live="polite">Checking workspace setup…</div>
+
+    <section id="signin-panel" class="card sign-in-card" hidden>
+      <div class="eyebrow">WELCOME TO MATWORK</div><h2>Sign in with your email</h2>
+      <p class="muted">We’ll email you a sign-in link. Your role and access come from the family or coach invitation you use.</p>
+      <form id="signin-form" class="form-stack"><label>Email address<input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="primary-button" type="submit">Email me a sign-in link</button></form>
+      <p class="fine-print">This shared area is separate from the browser-local journal on the public site.</p>
+    </section>
+
+    <section id="onboarding-panel" class="card" hidden>
+      <div class="eyebrow">GET CONNECTED</div><h2>Set up your place in the journey</h2>
+      <p class="muted">Parents can create a family space. Wrestlers and coaches can join with a one-time access code from a parent.</p>
+      <div class="onboarding-grid">
+        <form id="family-form" class="form-stack"><h3>Parent setup</h3><label>Family label <input id="family-label" maxlength="80" value="My family"></label><button class="primary-button" type="submit">Create parent workspace</button></form>
+        <form id="accept-invite-form" class="form-stack"><h3>Join with an access code</h3><label>One-time code<input id="invite-code" autocomplete="off" maxlength="64" required placeholder="Paste the code from your parent"></label><button class="secondary-button" type="submit">Join workspace</button></form>
+      </div>
+    </section>
+
+    <section id="workspace-panel" hidden>
+      <div class="workspace-toolbar card"><div><div class="eyebrow" id="role-eyebrow">YOUR WORKSPACE</div><h2 id="role-title">Progress, together.</h2></div><div id="role-switch-wrap" hidden><label class="sr-only" for="role-switch">Choose workspace view</label><select id="role-switch"></select></div></div>
+      <div id="athlete-setup" class="card" hidden><div class="eyebrow">FIRST ATHLETE</div><h2>Add a wrestler profile</h2><p class="muted">Use a first name or a nickname. Keep birthdays, school names, locations, and schedules out of shared journal notes.</p><form id="wrestler-form" class="inline-form"><label>First name<input id="wrestler-first-name" maxlength="30" required placeholder="Wrestler’s first name"></label><button class="primary-button" type="submit">Add wrestler</button></form></div>
+      <div id="athlete-picker-card" class="card athlete-picker" hidden><label for="athlete-picker" class="eyebrow">WRESTLER</label><select id="athlete-picker"></select><div id="invite-actions" class="invite-actions" hidden><button class="secondary-button" type="button" data-create-invite="wrestler">Create wrestler access code</button><button class="secondary-button" type="button" data-create-invite="coach">Create coach access code</button></div><div id="invite-result" class="invite-result" hidden></div></div>
+      <div id="role-summary" class="role-summary"></div>
+      <div class="content-grid">
+        <section class="card"><div class="card-heading"><div><div class="eyebrow">BUILD ON EACH SESSION</div><h3>Lesson notes</h3></div></div><div id="lesson-list" class="record-list"></div></section>
+        <section class="card"><div class="card-heading"><div><div class="eyebrow">SMALL REPS, BIG DIFFERENCE</div><h3>At-home practice</h3></div></div><div id="practice-list" class="record-list"></div></section>
+      </div>
+      <section id="author-panel" class="card author-panel" hidden><div class="card-heading"><div><div class="eyebrow">KEEP THE NEXT STEP CLEAR</div><h3 id="author-title">Add a lesson or practice plan</h3></div></div>
+        <form id="lesson-form" class="form-stack"><h4>Lesson record</h4><div class="form-two"><label>Date<input id="lesson-date" type="date" required></label><label>Lesson number (optional)<input id="lesson-number" type="number" min="1" max="999" placeholder="1"></label></div><label>Primary focus<input id="lesson-focus" maxlength="160" required placeholder="Stance, motion, positioning…"></label><label>Coach cues actually given<textarea id="lesson-cues" rows="4" placeholder="Keep these as the coach said them."></textarea></label><label>Lesson observations and development priorities<textarea id="lesson-observations" rows="4" placeholder="Separate reported observations and next priorities from the actual cues."></textarea></label><label>Parent notes or interpretation<textarea id="lesson-parent-notes" rows="3" placeholder="Optional, parent-facing context or interpretation."></textarea></label><button class="primary-button" type="submit">Save lesson</button></form>
+        <form id="assignment-form" class="form-stack assignment-form"><h4>At-home practice item</h4><label>Practice focus<input id="assignment-title" maxlength="140" required placeholder="Short steps or skill focus"></label><label>Instructions<textarea id="assignment-instructions" rows="3" placeholder="How to practice, repetitions, and quality cues"></textarea></label><div class="form-two"><label>Who is this for?<select id="assignment-audience"><option value="wrestler">Wrestler</option><option value="parent">Parent</option></select></label><label>Due date (optional)<input id="assignment-due" type="date"></label></div><button class="secondary-button" type="submit">Add practice item</button></form>
+      </section>
+      <section class="card privacy-note"><b>Role access is enforced by the shared database.</b> Parent-only notes are excluded from wrestler and coach reads. Access codes are one time and expire after seven days.</section>
+    </section>
+    <footer class="shared-footer"><a href="index.html">← Back to the public Matwork journal</a><span>MATWORK · THE LONG GAME</span></footer>
+  </main>
+</body>
+</html>
+
