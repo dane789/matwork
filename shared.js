@@ -97,6 +97,8 @@ async function loadIdentity() {
   hide("#role-switch-wrap", available.length < 2);
   hide("#onboarding-panel"); hide("#workspace-panel", false);
   await loadWorkspace();
+  const statusText = $("#notice").textContent.trim();
+  if (statusText === "Checking workspace setup…" || statusText === "Use your Matwork email. Parents use the family account email; wrestlers and coaches use their invited email.") notice("");
 }
 
 async function loadWorkspace() {
