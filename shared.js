@@ -198,10 +198,10 @@ async function run(action) {
   finally { setBusy(false); }
 }
 
-async function acceptInvite(code) {
+async function acceptInvite(code, fieldSelector = "#invite-code") {
   const { error } = await client.rpc("accept_access_invite", { p_invite_code: code.trim() });
   if (error) throw error;
-  $("#invite-code").value = "";
+  $(fieldSelector).value = "";
   notice("You’re connected. Your workspace is ready.", "good");
   await loadIdentity();
 }
@@ -278,6 +278,7 @@ $("#wrestler-form").addEventListener("submit", (event) => {
 });
 
 $("#accept-invite-form").addEventListener("submit", (event) => { event.preventDefault(); run(() => acceptInvite($("#invite-code").value)); });
+$("#workspace-accept-invite-form").addEventListener("submit", (event) => { event.preventDefault(); run(() => acceptInvite($("#workspace-invite-code").value, "#workspace-invite-code")); });
 
 document.querySelectorAll("[data-create-invite]").forEach((button) => button.addEventListener("click", () => run(async () => {
   const { data, error } = await client.rpc("create_access_invite", { target_wrestler: selectedWrestler, invite_role: button.dataset.createInvite });
