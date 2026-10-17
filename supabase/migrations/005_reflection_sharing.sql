@@ -3,8 +3,8 @@
 -- them. Assigned coaches see only entries shared with coaches.
 
 alter table public.reflections
-  add column author_role text check (author_role in ('parent', 'wrestler')),
-  add column share_with_coach boolean not null default false;
+  add column if not exists author_role text check (author_role in ('parent', 'wrestler')),
+  add column if not exists share_with_coach boolean not null default false;
 
 drop policy if exists reflections_read_by_audience on public.reflections;
 create policy reflections_read_by_audience on public.reflections for select to authenticated
