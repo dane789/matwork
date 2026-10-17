@@ -183,20 +183,33 @@ async function loadRecords() {
   }
   const latest = new Map();
   for (const event of eventResult.data || []) if (!latest.has(event.assignment_id)) latest.set(event.assignment_id, event);
+  const visibleAssignments = assignments.filter((assignment) => role !== "wrestler" || assignment.audience === "wrestler");
+  const athleteAssignments = visibleAssignments.filter((assignment) => assignment.audience === "wrestler");
+  const athleteCompleted = athleteAssignments.filter((assignment) => latest.get(assignment.id)?.completed).length;
+  $("#practice-heading").textContent = role === "wrestler" ? "At-home practice checklist" : "At-home practice";
+  $("#practice-intro").textContent = role === "wrestler"
+    ? "Tap each step after you practice it. Your coach can see your check-ins and use them to plan what comes next."
+    : role === "coach" ? "See the athlete’s practice check-ins before planning the next session." : "See what is being practiced between lessons. Coach assignments and parent recommendations are labeled separately.";
+  hide("#practice-intro", role === "parent");
+  hide("#practice-progress", role !== "wrestler" || athleteAssignments.length === 0);
+  if (role === "wrestler" && athleteAssignments.length) {
+    $("#practice-progress-label").textContent = `${athleteCompleted} of ${athleteAssignments.length} practiced`;
+    $("#practice-progress-bar").style.width = `${Math.round((athleteCompleted / athleteAssignments.length) * 100)}%`;
+  }
   $("#lesson-list").innerHTML = lessons.length ? lessons.map((lesson) => {
     const notes = items.filter((item) => item.lesson_id === lesson.id);
     const coachName = coachProfiles.get(lesson.created_by);
     const instructor = lesson.instructor_label === "Coach" ? (coachName || "Coach") : lesson.instructor_label;
     return `<article class="record-card"><div class="record-meta">${esc(shortDate(lesson.lesson_date))}${lesson.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${instructor ? ` · Coach: ${esc(instructor)}` : ""}</div><h4>${esc(lesson.focus)}</h4>${notes.map((item) => { const itemCoach = coachProfiles.get(item.authored_by); const attribution = itemCoach ? ` · ${esc(itemCoach)}` : ""; return `<div class="record-label ${item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : ""}">${item.ai_assisted ? "AI ORGANIZED · COACH APPROVED · " : ""}${esc(item.kind.replaceAll("_", " "))}${attribution}</div><p>${esc(item.content)}</p>`; }).join("")}</article>`;
   }).join("") : `<div class="empty-state">No lessons have been recorded here yet.</div>`;
-  $("#practice-list").innerHTML = assignments.length ? assignments.map((assignment) => {
+  $("#practice-list").innerHTML = visibleAssignments.length ? visibleAssignments.map((assignment) => {
     const event = latest.get(assignment.id);
     const checked = Boolean(event?.completed);
     const canComplete = role === "wrestler";
     const origin = assignment.coach_origin === "ai_suggestion_approved" ? "AI SUGGESTION · COACH APPROVED" : assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION";
     const coachAuthor = assignment.source === "coach" ? coachProfiles.get(assignment.created_by) : "";
-    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "ATHLETE" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
-  }).join("") : `<div class="empty-state">No active practice items yet. A parent or coach can add a clear next step after a lesson.</div>`;
+    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} practiced" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "ATHLETE" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
+  }).join("") : `<div class="empty-state">${role === "wrestler" ? "Your coach will add practice steps here after a lesson. When your checklist is ready, mark each step after you practice it." : "No active practice items yet. A parent or coach can add a clear next step after a lesson."}</div>`;
   const reflections = reflectionResult.data || [];
   $("#reflection-list-intro").textContent = !reflectionSharingAvailable
     ? "Check-in sharing is being connected. Use the lesson and practice forms above for now."
@@ -508,8 +521,8 @@ $("#practice-list").addEventListener("change", (event) => {
   run(async () => {
     const { error } = await client.from("checklist_events").insert({ assignment_id: checkbox.dataset.complete, wrestler_id: selectedWrestler, completed: checkbox.checked, note: "", recorded_by: user.id });
     if (error) throw error;
+    notice(checkbox.checked ? "Practice check-in saved for your coach." : "Practice check-in updated.", "good");
     await loadRecords();
-    notice(checkbox.checked ? "Practice completion saved." : "Practice marked as not complete yet.", "good");
   });
 });
 
