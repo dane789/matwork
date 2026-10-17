@@ -6,8 +6,10 @@ This folder contains the initial schema for the private parent, wrestler, and co
 
 - `migrations/001_private_journal.sql` is installed in the Matwork Supabase project. It defines the private records, role-aware row-level security (RLS), and one-time parent-created access codes for wrestler and coach accounts.
 - `migrations/003_coach_profiles.sql` adds private, account-linked coach display names. It is installed in the active Matwork Supabase project. For a new project, apply it after the base schema and before using the matching `shared.html` and `shared.js` changes. It does not expose coach emails.
+- `functions/coach-session-draft/index.ts` is deployed as the authenticated `coach-session-draft` Edge Function. It validates the coach assignment before sending lesson notes to the OpenAI Responses API, and returns an editable draft without saving it. The function handles browser CORS preflight requests for the GitHub Pages origin and local preview.
+- The function is deployed, but its live OpenAI request currently returns `429 credit_balance_exhausted`. Add API credits before retrying. No OpenAI secret belongs in this repository or in Drive.
 - `shared.html` and its JavaScript/CSS provide the initial shared workspace: email-link sign-in, family setup, wrestler profiles, lesson notes, practice assignments, and wrestler completion tracking.
-- A sign-in link worked from the published shared page on a phone. Desktop sign-in and separate parent, wrestler, and coach permissions still need end-to-end verification before real records are relied on.
+- A sign-in link worked from the published shared page on a phone and desktop. The owner has parent and pilot-coach views in one signed-in account; separate parent, wrestler, and coach accounts still need end-to-end verification before real records are relied on.
 - Supabase's built-in email sender is limited to two auth emails per hour. Configure custom SMTP before onboarding separate wrestler and coach accounts.
 - The original public journal at `index.html` is browser-local; it does not share data or enforce roles.
 
