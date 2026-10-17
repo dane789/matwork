@@ -81,7 +81,8 @@ This step remains gated until the administrator configures the `OPENAI_API_KEY` 
 
 After submission, AI formats the note into a structured draft with these sections:
 
-- **Coach’s lesson record:** focus, techniques covered, and coaching cues present in the source note. Preserve quoted wording when possible.
+- **Parent lesson recap:** a technical section title/focus, one objective, concise key coaching points, and one lesson takeaway. Show this in a readable hierarchy, with the takeaway easy to spot. Coach-authored material is labeled **Coach notes**; AI organized material is labeled **AI organized · Coach approved**. Keep exact cue wording in a separate expandable area so an AI explanation is not presented as a direct quote.
+- **Coach’s lesson record:** techniques covered and coaching cues present in the source note. Preserve quoted wording when possible.
 - **Wrestler focus:** one to three short, age-appropriate takeaways in direct language.
 - **At-home checklist:** only tasks supported by the source note or explicitly entered by the coach. Include repetitions, time, or intensity only when the coach supplied them.
 - **Parent support:** practical ways to encourage the wrestler and help reinforce the stated focus, without asking the parent to act as a coach.
@@ -94,6 +95,7 @@ After submission, AI formats the note into a structured draft with these section
 - Send only the current lesson note. Do not send the wrestler's full journal or earlier lessons for each draft.
 - Make one request per submitted note, with no automatic retry, background summary, or second “polish” pass. Preserve the note if the request fails so the coach can continue manually.
 - Keep the generated draft concise and cap the output. The current source caps it at 1,600 tokens; the deployed function needs redeployment for this limit to apply.
+- Keep the coach review short: focus, recap, and assignments should be easy to scan and approve; avoid making the coach repeat facts already present in the dictated note. The parent gets the fuller context, while the athlete gets simple, motivating next steps.
 - Consider the lower-priced `gpt-5.4-nano` for extraction only after a coach reviews its accuracy against an approved sample. Keep human approval regardless of model.
 - Set a small manual API credit budget and turn off automatic recharge. Show the coach when AI is unavailable and leave manual note entry available.
 
