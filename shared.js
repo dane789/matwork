@@ -54,7 +54,7 @@ function showSignedOut() {
 }
 
 function roleLabels(available) {
-  return { parent: "Parent dashboard", wrestler: "Wrestler view", coach: "Coach workspace" }[available];
+  return { parent: "Parent dashboard", wrestler: "Athlete view", coach: "Coach workspace" }[available];
 }
 
 async function loadIdentity() {
@@ -113,14 +113,14 @@ async function loadWorkspace() {
   const { data, error } = await query.order("created_at", { ascending: true });
   if (error) throw error;
   wrestlers = data || [];
-  const title = { parent: "Parent dashboard", wrestler: "Wrestler view", coach: "Coach workspace" }[role];
+  const title = { parent: "Parent dashboard", wrestler: "Athlete view", coach: "Coach workspace" }[role];
   const intro = {
-    parent: "Everything for your wrestler, including lesson details and parent-only notes.",
+    parent: "Everything for your athlete, including lesson details and parent-only notes.",
     wrestler: "Your focus, practice checklist, lesson cues, and progress.",
     coach: "Assigned athletes, coaching notes, and at-home practice follow-through."
   }[role];
   $("#role-title").textContent = title;
-  $("#role-eyebrow").textContent = role === "parent" ? "FAMILY VIEW" : role === "wrestler" ? "WRESTLER VIEW" : "COACH VIEW";
+  $("#role-eyebrow").textContent = role === "parent" ? "FAMILY VIEW" : role === "wrestler" ? "ATHLETE VIEW" : "COACH VIEW";
   $("#role-summary").textContent = intro;
   const ownedFamilies = memberships.filter((item) => item.role === "parent").map((item) => item.family_id);
   hide("#athlete-setup", role !== "parent" || wrestlers.length > 0);
@@ -135,17 +135,17 @@ async function loadWorkspace() {
   $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
   $("#author-title").textContent = role === "coach" ? "Coach session tools" : "Parent support tools";
   $("#author-summary").textContent = role === "coach"
-    ? "Capture the session, review the details, and set clear practice steps for the wrestler."
+    ? "Capture the session, review the details, and set clear practice steps for the athlete."
     : "Keep family context clear, record support ideas, and share useful observations with the coach.";
   if (!wrestlers.length) {
-    $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first wrestler profile to start the journal." : "No wrestler profile is linked to this account yet. Ask a parent for an access code."}</div>`;
+    $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first athlete profile to start the journal." : "No athlete profile is linked to this account yet. Ask a parent for an access code."}</div>`;
     $("#practice-list").innerHTML = "";
     if (role === "parent") hide("#athlete-setup", false);
     return;
   }
   if (!wrestlers.some((item) => item.id === selectedWrestler)) selectedWrestler = wrestlers[0].id;
   const picker = $("#athlete-picker");
-  picker.replaceChildren(...wrestlers.map((wrestler) => { const option = document.createElement("option"); option.value = wrestler.id; option.textContent = wrestler.first_name || "Wrestler"; return option; }));
+  picker.replaceChildren(...wrestlers.map((wrestler) => { const option = document.createElement("option"); option.value = wrestler.id; option.textContent = wrestler.first_name || "Athlete"; return option; }));
   picker.value = selectedWrestler;
   await loadRecords();
 }
@@ -195,33 +195,33 @@ async function loadRecords() {
     const canComplete = role === "wrestler";
     const origin = assignment.coach_origin === "ai_suggestion_approved" ? "AI SUGGESTION · COACH APPROVED" : assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION";
     const coachAuthor = assignment.source === "coach" ? coachProfiles.get(assignment.created_by) : "";
-    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "WRESTLER" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
+    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} complete" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson cues and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "ATHLETE" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
   }).join("") : `<div class="empty-state">No active practice items yet. A parent or coach can add a clear next step after a lesson.</div>`;
   const reflections = reflectionResult.data || [];
   $("#reflection-list-intro").textContent = !reflectionSharingAvailable
     ? "Check-in sharing is being connected. Use the lesson and practice forms above for now."
     : role === "coach"
-    ? "Family and wrestler notes explicitly shared with you, ready to inform the next session."
+    ? "Family and athlete notes explicitly shared with you, ready to inform the next session."
     : role === "parent"
       ? "Your perspective stays with the family unless you choose to share it."
       : "Your check-ins stay yours unless you choose to share them with your coach.";
   $("#reflection-list").innerHTML = reflections.length ? reflections.map((entry) => {
-    const author = entry.author_role === "parent" ? "PARENT PERSPECTIVE" : entry.author_role === "wrestler" ? "WRESTLER CHECK-IN" : "FAMILY CHECK-IN";
-    const audience = entry.audience === "parent" && !entry.share_with_coach ? "FAMILY ONLY" : entry.share_with_coach || entry.audience === "coach" ? "SHARED WITH COACH" : "WRESTLER VIEW";
+    const author = entry.author_role === "parent" ? "PARENT PERSPECTIVE" : entry.author_role === "wrestler" ? "ATHLETE CHECK-IN" : "FAMILY CHECK-IN";
+    const audience = entry.audience === "parent" && !entry.share_with_coach ? "FAMILY ONLY" : entry.share_with_coach || entry.audience === "coach" ? "SHARED WITH COACH" : "ATHLETE VIEW";
     return `<article class="reflection-card"><div class="reflection-meta">${esc(shortDate(entry.reflection_date))} · ${author}</div><div class="record-label">${role === "coach" ? "SHARED WITH COACH" : audience}</div><p>${esc(entry.content)}</p>${entry.mood ? `<small class="fine-print">How it felt: ${esc(entry.mood)}</small>` : ""}</article>`;
   }).join("") : `<div class="empty-state">No check-ins yet. A short note can help the next conversation start in the right place.</div>`;
   const completed = assignments.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const coachAssigned = assignments.filter((assignment) => assignment.source === "coach");
   const coachCompleted = coachAssigned.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const athlete = wrestlers.find((item) => item.id === athleteId);
-  $("#role-summary").textContent = `${athlete?.first_name || "Wrestler"} · ${introForRole()}${role === "coach" ? ` ${coachCompleted} of ${coachAssigned.length} coach-assigned items marked complete.` : role === "parent" ? ` ${completed} of ${assignments.length} practice items marked complete.` : ""}`;
+  $("#role-summary").textContent = `${athlete?.first_name || "Athlete"} · ${introForRole()}${role === "coach" ? ` ${coachCompleted} of ${coachAssigned.length} coach-assigned items marked complete.` : role === "parent" ? ` ${completed} of ${assignments.length} practice items marked complete.` : ""}`;
 }
 
 function configureReflectionForm() {
   const select = $("#reflection-sharing");
   if (!select) return;
   const options = role === "parent"
-    ? [["family", "Family only"], ["coach", "Share with coach"], ["both", "Share with wrestler and coach"]]
+    ? [["family", "Family only"], ["coach", "Share with coach"], ["both", "Share with athlete and coach"]]
     : role === "wrestler"
       ? [["private", "Only me and my family"], ["coach", "Share with coach"]]
       : [];
@@ -239,7 +239,7 @@ function configureReflectionForm() {
 $("#reflection-form").addEventListener("submit", (event) => {
   event.preventDefault();
   run(async () => {
-    if (!user || !selectedWrestler || !["parent", "wrestler"].includes(role)) throw new Error("Choose a family or wrestler view to add a check-in.");
+    if (!user || !selectedWrestler || !["parent", "wrestler"].includes(role)) throw new Error("Choose a family or athlete view to add a check-in.");
     const content = $("#reflection-content").value.trim();
     if (content.length < 3) throw new Error("Add a short check-in before sharing.");
     const choice = $("#reflection-sharing").value;
@@ -292,10 +292,10 @@ function renderDraftReview(draft) {
   const originalTasks = (draft.coach_assigned_tasks || []).map((item) => ({ ...item, selected: true, origin: "Coach assignment captured" }));
   const suggestedTasks = (draft.practice_suggestions || []).map((item) => ({ ...item, selected: false, origin: "AI suggestion — select only if you want to assign it" }));
   const tasks = [...originalTasks, ...suggestedTasks];
-  const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Wrestler</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
+  const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Athlete</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
   const questions = draft.clarification_questions?.length ? `<div class="record-label">CHECK BEFORE SHARING</div><ul>${draft.clarification_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : "";
   const node = $("#draft-review");
-  node.innerHTML = `<h4>Review the organized draft</h4><p class="muted">Nothing is saved or shared until you approve. AI suggestions are clearly separated from assignments captured in your note.</p>${draftField("Primary focus", "focus", draft.focus, 2)}${draftField("Coach cues from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Wrestler focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
+  node.innerHTML = `<h4>Review the organized draft</h4><p class="muted">Nothing is saved or shared until you approve. AI suggestions are clearly separated from assignments captured in your note.</p>${draftField("Primary focus", "focus", draft.focus, 2)}${draftField("Coach cues from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Athlete focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
   node.hidden = false;
   node.querySelector("#discard-draft").addEventListener("click", () => { lessonDraft = null; node.replaceChildren(); node.hidden = true; });
   node.querySelector("#approve-draft").addEventListener("click", () => run(async () => saveApprovedDraft(tasks)));
@@ -405,7 +405,7 @@ $("#family-form").addEventListener("submit", (event) => {
     const { error } = await client.rpc("create_family", { family_label: $("#family-label").value.trim() || "My family" });
     if (error) throw error;
     role = "parent";
-    notice("Parent workspace created. Add the wrestler profile next.", "good");
+    notice("Parent workspace created. Add the athlete profile next.", "good");
     await loadIdentity();
   });
 });
@@ -419,7 +419,7 @@ $("#wrestler-form").addEventListener("submit", (event) => {
     if (error) throw error;
     $("#wrestler-first-name").value = "";
     selectedWrestler = data;
-    notice("Wrestler profile added.", "good");
+    notice("Athlete profile added.", "good");
     await loadWorkspace();
   });
 });
@@ -431,7 +431,7 @@ document.querySelectorAll("[data-create-invite]").forEach((button) => button.add
   const { data, error } = await client.rpc("create_access_invite", { target_wrestler: selectedWrestler, invite_role: button.dataset.createInvite });
   if (error) throw error;
   const node = $("#invite-result"); node.hidden = false;
-  node.innerHTML = `<b>${button.dataset.createInvite === "coach" ? "Coach" : "Wrestler"} access code</b><code>${esc(data)}</code>Share this one-time code privately. It expires in seven days and can be used once.`;
+  node.innerHTML = `<b>${button.dataset.createInvite === "coach" ? "Coach" : "Athlete"} access code</b><code>${esc(data)}</code>Share this one-time code privately. It expires in seven days and can be used once.`;
   notice("Access code created. Share it only with the intended person.", "good");
 })));
 
@@ -453,7 +453,7 @@ $("#lesson-form").addEventListener("submit", (event) => {
     if (rows.length) { const { error: itemError } = await client.from("lesson_items").insert(rows); if (itemError) throw itemError; }
     event.target.reset();
     $("#lesson-date").value = new Date().toISOString().slice(0, 10);
-    notice(`Lesson saved for ${athlete?.first_name || "wrestler"}.`, "good");
+    notice(`Lesson saved for ${athlete?.first_name || "athlete"}.`, "good");
     await loadRecords();
   });
 });
@@ -461,7 +461,7 @@ $("#lesson-form").addEventListener("submit", (event) => {
 $("#coach-capture-form").addEventListener("submit", (event) => {
   event.preventDefault();
   run(async () => {
-    if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned wrestler in the Coach workspace first.");
+    if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned athlete in the Coach workspace first.");
     if (coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so families can see who wrote the lesson.");
     const note = $("#capture-note").value.trim();
     if (note.length < 12) throw new Error("Add a little more detail before organizing the note.");
@@ -493,7 +493,7 @@ $("#coach-capture-form").addEventListener("submit", (event) => {
 $("#assignment-form").addEventListener("submit", (event) => {
   event.preventDefault();
   run(async () => {
-    if (role === "coach" && coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so the wrestler and parent can see who assigned this.");
+    if (role === "coach" && coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so the athlete and parent can see who assigned this.");
     const { error } = await client.from("practice_assignments").insert({ wrestler_id: selectedWrestler, title: $("#assignment-title").value.trim(), instructions: $("#assignment-instructions").value.trim(), source: role === "coach" ? "coach" : "parent", audience: $("#assignment-audience").value, created_by: user.id, due_date: $("#assignment-due").value || null });
     if (error) throw error;
     event.target.reset();
