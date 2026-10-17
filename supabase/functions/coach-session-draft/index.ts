@@ -26,7 +26,7 @@ Deno.serve(async (request) => {
   if (!authorization?.startsWith("Bearer ")) return respond(401, { error: "Sign in as an assigned coach first." });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const openAiKey = Deno.env.get("OPENAI_API_KEY");
   if (!supabaseUrl || !anonKey || !openAiKey) return respond(503, { error: "Lesson organization is not configured yet. Ask the Matwork administrator to finish setup." });
 
@@ -61,8 +61,9 @@ Deno.serve(async (request) => {
       console.error("OpenAI response failed", aiResponse.status, result?.error?.type || "provider error");
       return respond(502, { error: "Matwork could not organize that note right now. Your original note is still in the capture box; try again shortly." });
     }
-    if (result?.status === "incomplete" || !result?.output_text) return respond(502, { error: "The draft did not finish. Your original note is still in the capture box; try again." });
-    const draft = JSON.parse(result.output_text);
+    const outputText = result?.output_text || result?.output?.flatMap((item: { content?: Array<{ type?: string; text?: string }> }) => item.content || []).find((part: { type?: string }) => part.type === "output_text")?.text;
+    if (result?.status === "incomplete" || !outputText) return respond(502, { error: "The draft did not finish. Your original note is still in the capture box; try again." });
+    const draft = JSON.parse(outputText);
     return respond(200, { draft, model: "gpt-5.4-mini" });
   } catch (error) {
     console.error("Coach note draft failed", error instanceof Error ? error.message : "unknown error");
