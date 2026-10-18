@@ -32,4 +32,11 @@
 
 @media(max-width:760px){.main-content{padding-top:48px}.topbar{padding-top:6px}}
 
+/* Keep gold for decorative accents, not journal text. */
+.local-draft-note{color:#52647a}
+.local-draft-note p{color:#5b697a}
+.local-draft-note b{color:#273f5c}
+.lesson-section.parent-summary>b{color:#52647a}
+.stat-icon.gold,.sparkle,.entry-icon.strength,.milestone-star{color:#52647a}
+
 
