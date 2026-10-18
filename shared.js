@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 15930)
+Total output lines: 943
+
 const $ = (selector) => document.querySelector(selector);
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const shortDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Date not set";
@@ -136,9 +139,14 @@ function coachDisplayLabel(name) {
   return /^coach\b/i.test(clean) ? clean : `Coach ${clean}`;
 }
 
+function athleteLoginEmail(code) {
+  const normalized = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return normalized ? `${normalized}@athlete-login.matwork.invalid` : "";
+}
+
 async function loadIdentity() {
   if (!user) return showSignedOut();
-  $("#account-label").textContent = user.email || "Signed in";
+  $("#account-label").textContent = user.user_metadata?.matwork_role === "athlete" ? "Athlete account" : user.email || "Signed in";
   hide("#signin-panel"); hide("#sign-out", false);
   const [{ data: memberRows, error: memberError }, { data: coachRows, error: coachError }] = await Promise.all([
     client.from("family_memberships").select("family_id,role,wrestler_id").eq("user_id", user.id),
@@ -218,6 +226,8 @@ async function loadWorkspace() {
   hide("#assignment-share-coach", role !== "parent");
   if (!$("#parent-capture-date").value) $("#parent-capture-date").value = new Date().toISOString().slice(0, 10);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
+  hide("#athlete-access-setup");
+  hide("#invite-result");
   hide("#add-athlete-form");
   hide("#add-athlete-toggle", role !== "parent" || wrestlers.length === 0);
   $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
@@ -427,34 +437,7 @@ $("#coach-profile-form").addEventListener("submit", (event) => {
   run(async () => {
     if (role !== "coach" || !user) throw new Error("Sign in with an assigned coach account to set this name.");
     if (!coachProfilesAvailable) throw new Error("Coach name attribution is waiting for a database update.");
-    const displayName = $("#coach-display-name").value.trim();
-    if (!displayName) throw new Error("Enter the name you want families to see.");
-    const { data, error } = await client.from("coach_profiles").upsert({ user_id: user.id, display_name: displayName }, { onConflict: "user_id" }).select("user_id,display_name").single();
-    if (error) throw error;
-    ownCoachProfile = data;
-    notice("Coach name saved. It will appear with your notes and assignments.", "good");
-    if (selectedWrestler) await loadRecords();
-  });
-});
-
-function introForRole() { return { parent: "Full family record.", wrestler: "Your work, one step at a time.", coach: "Assigned coaching view." }[role]; }
-
-function draftField(label, key, value, rows = 3) {
-  return `<label>${esc(label)}<textarea data-draft-field="${esc(key)}" rows="${rows}">${esc(value || "")}</textarea></label>`;
-}
-
-function renderDraftReview(draft) {
-  lessonDraft = draft;
-  const originalTasks = (draft.coach_assigned_tasks || []).map((item) => ({ ...item, selected: true, origin: "Coach assignment captured" }));
-  const suggestedTasks = (draft.practice_suggestions || []).map((item) => ({ ...item, selected: false, origin: "AI suggestion — select only if you want to assign it" }));
-  const tasks = [...originalTasks, ...suggestedTasks];
-  const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Athlete</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
-  const questions = draft.clarification_questions?.length ? `<div class="record-label">CHECK BEFORE SHARING</div><ul>${draft.clarification_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : "";
-  const node = $("#draft-review");
-  node.innerHTML = `<h4>Quick review before sharing</h4><p class="muted">Check the short lesson recap and practice steps. Nothing is saved or shared until you approve. AI suggestions stay separate from work stated in your note.</p>${draftField("Lesson focus", "focus", draft.focus, 2)}${draftField("Parent lesson recap · edit as needed", "parent_recap", serializeLessonSections(draft.lesson_sections), 9)}${draftField("Coach’s words or instructions from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Athlete focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
-  node.hidden = false;
-  node.querySelector("#discard-draft").addEventListener("click", () => { lessonDraft = null; node.replaceChildren(); node.hidden = true; });
-  node.querySelector("#approve-draft").addEventListener("click", () => run(async () => saveApprovedDraft(tasks)));
+    const displayName = $("#coach-display-…930 tokens truncated…, () => run(async () => saveApprovedDraft(tasks)));
 }
 
 async function saveApprovedDraft(tasks) {
@@ -598,6 +581,21 @@ $("#signin-form").addEventListener("submit", (event) => {
   });
 });
 
+$("#athlete-signin-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const code = $("#athlete-login-code").value.trim();
+    const pin = $("#athlete-login-pin").value;
+    if (!/^\d{8}$/.test(pin)) throw new Error("Enter the 8-digit Athlete PIN from your parent.");
+    const { data, error } = await client.functions.invoke("athlete-access", { body: { action: "login", code, pin } });
+    if (error || !data?.access_token || !data?.refresh_token) throw new Error(data?.error || error?.message || "We couldn’t sign in with that code and PIN. Check them with your parent and try again.");
+    const { error: sessionError } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    if (sessionError) throw sessionError;
+    $("#athlete-login-pin").value = "";
+    notice("You’re signed in to your Athlete workspace.", "good");
+  });
+});
+
 $("#sign-out").addEventListener("click", () => run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; showSignedOut(); notice("You’re signed out.", "good"); }));
 $("#role-switch").addEventListener("change", () => run(async () => {
   if (role === "parent") rememberParentCapture(selectedWrestler);
@@ -615,7 +613,39 @@ $("#role-switch").addEventListener("change", () => run(async () => {
   await loadWorkspace();
   if (role === "parent" && selectedWrestler) restoreParentCapture(selectedWrestler);
 }));
-$("#athlete-picker").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); selectedWrestler = $("#athlete-picker").value; if (role === "parent") restoreParentCapture(selectedWrestler); hide("#invite-result"); await loadRecords(); }));
+$("#athlete-picker").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); selectedWrestler = $("#athlete-picker").value; if (role === "parent") restoreParentCapture(selectedWrestler); hide("#invite-result"); hide("#athlete-access-setup"); await loadRecords(); }));
+
+$("#athlete-access-toggle").addEventListener("click", () => {
+  hide("#athlete-access-setup", false);
+  $("#athlete-pin-create").focus();
+});
+
+$("#athlete-access-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    if (role !== "parent" || !selectedWrestler) throw new Error("Choose an athlete in the Parent view first.");
+    const pin = $("#athlete-pin-create").value;
+    const confirmPin = $("#athlete-pin-confirm").value;
+    if (!/^\d{8}$/.test(pin)) throw new Error("Choose an 8-digit PIN.");
+    if (pin !== confirmPin) throw new Error("The PINs don’t match. Please enter them again.");
+    const { data, error } = await client.functions.invoke("athlete-access", { body: { action: "setup", wrestler_id: selectedWrestler, pin } });
+    if (error || !data?.access_code) throw new Error(data?.error || error?.message || "Athlete sign-in couldn’t be set up. Please try again.");
+    $("#athlete-pin-create").value = "";
+    $("#athlete-pin-confirm").value = "";
+    const result = $("#invite-result");
+    result.hidden = false;
+    result.innerHTML = `<b>Athlete sign-in is ready</b><p>Share this code and the PIN you chose directly with the athlete. Keep both private. You can reset access here if either is lost.</p><code>${esc(data.access_code)}</code><button id="copy-athlete-code" class="secondary-button" type="button">Copy Athlete code</button><small>For account security, Matwork will not show the PIN again.</small>`;
+    $("#copy-athlete-code").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(data.access_code);
+        $("#copy-athlete-code").textContent = "Copied";
+      } catch {
+        notice("Select the displayed Athlete code and copy it manually.", "info");
+      }
+    });
+    notice("Athlete sign-in is ready. Share the code and PIN privately.", "good");
+  });
+});
 
 $("#family-form").addEventListener("submit", (event) => {
   event.preventDefault();
