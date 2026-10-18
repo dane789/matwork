@@ -168,6 +168,7 @@ async function loadIdentity() {
 }
 
 async function loadWorkspace() {
+  $("#workspace-panel").dataset.role = role;
   const ids = role === "parent"
     ? memberships.filter((item) => item.role === "parent").map((item) => item.family_id)
     : role === "wrestler"
@@ -280,9 +281,13 @@ async function loadRecords() {
     const event = latest.get(assignment.id);
     const checked = Boolean(event?.completed);
     const canComplete = role === "wrestler";
-    const origin = assignment.coach_origin === "parent_suggestion" ? "PARENT RECOMMENDATION · AI ORGANIZED" : assignment.coach_origin === "ai_suggestion_approved" ? "AI SUGGESTION · COACH APPROVED" : assignment.source === "coach" ? "COACH ASSIGNMENT" : "PARENT RECOMMENDATION";
+    const origin = assignment.coach_origin === "parent_suggestion" ? "Parent recommendation" : assignment.coach_origin === "ai_suggestion_approved" ? "Coach approved" : assignment.source === "coach" ? "Coach assignment" : "Parent recommendation";
     const coachAuthor = assignment.source === "coach" ? coachProfiles.get(assignment.created_by) : "";
-    return `<div class="practice-row ${checked ? "done" : ""}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} practiced" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><div class="practice-copy"><b>${esc(assignment.title)}</b><p>${esc(assignment.instructions || "Use the lesson instructions and reset if your position breaks down.")}</p><small>${origin}${coachAuthor ? ` · ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "ATHLETE" : "PARENT"}${assignment.due_date ? ` · DUE ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · UPDATED ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}</small></div></div>`;
+    const lesson = lessons.find((entry) => entry.id === assignment.lesson_id);
+    const context = role === "wrestler"
+      ? `${origin}${coachAuthor ? ` · Coach ${esc(coachAuthor)}` : ""}`
+      : `${origin}${coachAuthor ? ` · Coach ${esc(coachAuthor)}` : ""} · ${assignment.audience === "wrestler" ? "Athlete" : "Parent"}${lesson?.lesson_number ? ` · Lesson ${esc(lesson.lesson_number)}` : ""}${assignment.due_date ? ` · Due ${esc(shortDate(assignment.due_date))}` : ""}${event?.recorded_at ? ` · Updated ${esc(shortDate(event.recorded_at.slice(0, 10)))}` : ""}`;
+    return `<label class="practice-row ${checked ? "done" : ""} ${canComplete ? "can-check" : "read-only"}"><input type="checkbox" data-complete="${esc(assignment.id)}" aria-label="Mark ${esc(assignment.title)} practiced" ${checked ? "checked" : ""} ${canComplete ? "" : "disabled"}><span class="practice-copy"><b>${esc(assignment.title)}</b><span class="practice-instructions">${esc(assignment.instructions || "Use the lesson instructions and reset if your position breaks down.")}</span><small>${context}</small></span></label>`;
   }).join("") : `<div class="empty-state">${role === "wrestler" ? "Your coach will add practice steps here after a lesson. When your checklist is ready, mark each step after you practice it." : "No active practice items yet. A parent or coach can add a clear next step after a lesson."}</div>`;
   const reflections = reflectionResult.data || [];
   $("#reflection-list-intro").textContent = !reflectionSharingAvailable
