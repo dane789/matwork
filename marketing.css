@@ -130,6 +130,7 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 .coach-closing .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#e3d29d;color:#172940}
 @media(max-width:900px){.coach-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.coach-value-section{grid-template-columns:1fr;gap:18px}}
 @media(max-width:650px){.coach-page{padding-top:14px}.coach-intro{padding:27px 21px}.coach-intro-actions{gap:8px;display:grid}.coach-text-link{margin:6px 0 0}.coach-promise{gap:10px 12px;margin-top:25px;font-size:10px}.coach-section,.coach-roles{margin-bottom:34px}.coach-section-heading{text-align:left}.coach-section-heading h2,.coach-value-section h2{font-size:30px}.coach-section-heading>p{font-size:15px}.coach-steps{grid-template-columns:1fr;gap:10px}.coach-step{padding:20px}.coach-value-section{padding:23px 19px;gap:12px}.coach-benefits article{padding:14px}.coach-closing{padding:30px 19px}}
+@media(max-width:400px){.site-header .header-cta{min-height:40px;padding:0 10px;gap:5px;font-size:11px}}
 
 /* Keep Vegas gold as a decorative accent; use high-contrast neutrals for text. */
 .brand-mark{color:#fff}
