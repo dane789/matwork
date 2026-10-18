@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101c1c">
   <meta name="description" content="A shared, role-aware workspace for wrestling families, athletes, and coaches.">
   <title>Matwork — Team workspace</title>
-  <link rel="stylesheet" href="shared.css?v=20261017-navy4">
+  <link rel="stylesheet" href="shared.css?v=20261018-auth2">
   <script src="supabase-config.js"></script>
-  <script type="module" src="shared.js?v=20261017-navy4"></script>
+  <script type="module" src="shared.js?v=20261018-auth2"></script>
 </head>
 <body>
   <header class="shared-header">
@@ -20,9 +20,9 @@
     <div id="notice" class="notice" role="status" aria-live="polite">Checking workspace setup…</div>
 
     <section id="signin-panel" class="card sign-in-card" hidden>
-      <div class="eyebrow">WELCOME TO MATWORK</div><h2>Sign in with your email</h2>
-      <p class="muted">Enter your Matwork email. Parents use their family email. Athletes and coaches use the email where they received their invitation.</p>
-      <form id="signin-form" class="form-stack"><label>Email address<input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="primary-button" type="submit">Email me a sign-in link</button></form>
+      <div class="eyebrow">WELCOME TO MATWORK</div><h2>Sign in to Matwork</h2>
+      <p class="muted">Enter the email linked to your role and we’ll send a secure sign-in link. Parents use the family account email; athletes and coaches use the email that received their invitation. You’ll stay signed in on this browser until you sign out or your session expires.</p>
+      <form id="signin-form" class="form-stack"><label>Email address<input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="primary-button" type="submit">Send sign-in link</button></form>
     </section>
 
     <section id="onboarding-panel" class="card" hidden>
