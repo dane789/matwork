@@ -517,7 +517,7 @@ $("#signin-form").addEventListener("submit", (event) => {
     if (invite) redirect.searchParams.set("invite", invite);
     const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect.toString(), shouldCreateUser: true } });
     if (error) throw error;
-    notice("Check your inbox for a sign-in link. Open it on this device to continue.", "good");
+    notice("Your Matwork sign-in link is on its way. Open it on this device to continue; you’ll stay signed in here until you sign out or your session expires.", "good");
   });
 });
 
