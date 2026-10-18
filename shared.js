@@ -390,12 +390,17 @@ function configureReflectionForm() {
     : !hasNamedCoaches ? "Coach sharing is unavailable until every assigned coach has a display name."
     : `This makes the check-in visible in ${coachTarget} inside Matwork; it does not send a message.`;
   hide("#reflection-compose", role === "coach" || !reflectionSharingAvailable);
+  $("#reflection-eyebrow").textContent = role === "wrestler" ? "" : role === "parent" ? "FAMILY FEEDBACK" : "TEAM FEEDBACK";
+  hide("#reflection-eyebrow", role === "wrestler");
   $("#reflection-title").textContent = role === "parent" ? "What are you noticing?" : "Your check-in";
   $("#reflection-prompt").textContent = role === "parent"
     ? "What have you noticed since the last lesson? What would you like the coach to know before the next one? This is your perspective; the coach’s lesson notes stay separate."
-    : "What went well? What felt hard? What do you want to work on next? Short answers are fine.";
-  $("#reflection-content-label").firstChild.textContent = role === "parent" ? "Your observations" : "What would you like your support team to know?";
-  hide("#reflection-mood-label", role !== "wrestler");
+    : "How did practice go? A few words are enough.";
+  $("#reflection-content-label").firstChild.textContent = role === "parent" ? "Your observations" : "Quick note";
+  $("#reflection-content").rows = role === "wrestler" ? 2 : 4;
+  $("#reflection-sharing-label").firstChild.textContent = role === "wrestler" ? "Share with your coach?" : "Who should receive this check-in?";
+  hide("#reflection-date-label", role === "wrestler");
+  hide("#reflection-mood-label");
   if (!$("#reflection-date").value) $("#reflection-date").value = new Date().toISOString().slice(0, 10);
 }
 
