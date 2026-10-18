@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101c1c">
   <meta name="description" content="A shared, role-aware workspace for wrestling families, athletes, and coaches.">
   <title>Matwork — Team workspace</title>
-  <link rel="stylesheet" href="shared.css?v=20261018-expand1">
+  <link rel="stylesheet" href="shared.css?v=20261018-athleteadd1">
   <script src="supabase-config.js"></script>
-  <script type="module" src="shared.js?v=20261018-expanded2"></script>
+  <script type="module" src="shared.js?v=20261018-athleteadd1"></script>
 </head>
 <body>
   <header class="shared-header">
@@ -37,7 +37,7 @@
     <section id="workspace-panel" hidden>
       <div class="workspace-toolbar card"><div><div class="eyebrow" id="role-eyebrow">YOUR VIEW</div><h2 id="role-title">Your progress</h2></div><div id="role-switch-wrap" hidden><label for="role-switch">View as</label><select id="role-switch"></select></div></div>
       <div id="athlete-setup" class="card" hidden><div class="eyebrow">FIRST ATHLETE</div><h2>Add an athlete profile</h2><p class="muted">Use a first name or a nickname. Keep birthdays, school names, locations, and schedules out of shared journal notes.</p><form id="wrestler-form" class="inline-form"><label>First name<input id="wrestler-first-name" maxlength="30" required placeholder="Athlete’s first name"></label><button class="primary-button" type="submit">Add athlete</button></form></div>
-      <div id="athlete-picker-card" class="card athlete-picker" hidden><label for="athlete-picker" class="eyebrow">ATHLETE PROFILE</label><select id="athlete-picker"></select><div id="invite-actions" class="invite-actions" hidden><button class="secondary-button" type="button" data-create-invite="wrestler">Create athlete access code</button><button class="secondary-button" type="button" data-create-invite="coach">Create coach access code</button></div><div id="invite-result" class="invite-result" hidden></div></div>
+      <div id="athlete-picker-card" class="card athlete-picker" hidden><label for="athlete-picker" class="eyebrow">ATHLETE PROFILE</label><select id="athlete-picker"></select><div id="invite-actions" class="invite-actions" hidden><button class="secondary-button" type="button" data-create-invite="wrestler">Create athlete access code</button><button class="secondary-button" type="button" data-create-invite="coach">Create coach access code</button><button id="add-athlete-toggle" class="secondary-button" type="button">Add another athlete</button></div><form id="add-athlete-form" class="inline-form" hidden><label for="new-athlete-name">Athlete first name or nickname<input id="new-athlete-name" maxlength="30" required placeholder="First name or nickname"></label><button class="primary-button" type="submit">Add athlete</button></form><div id="invite-result" class="invite-result" hidden></div></div>
       <div id="role-summary" class="role-summary"></div>
       <div class="content-grid">
         <section class="card"><div class="card-heading"><div><div class="eyebrow">BUILD ON EACH SESSION</div><h3>Lesson notes</h3></div></div><div id="lesson-list" class="record-list"></div></section>
