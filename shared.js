@@ -61,6 +61,7 @@ let coachProfilesAvailable = true;
 let assignedCoachIds = [];
 let assignedCoachNames = [];
 let reflectionSharingAvailable = true;
+let workspaceLoadToken = 0;
 
 function isCoachProfilesMissing(error) {
   return error?.code === "42P01" || error?.code === "PGRST205" || /coach_profiles.*(not found|does not exist)/i.test(error?.message || "");
@@ -168,6 +169,8 @@ async function loadIdentity() {
 }
 
 async function loadWorkspace() {
+  const loadToken = ++workspaceLoadToken;
+  const requestedRole = role;
   $("#workspace-panel").dataset.role = role;
   const ids = role === "parent"
     ? memberships.filter((item) => item.role === "parent").map((item) => item.family_id)
@@ -179,6 +182,7 @@ async function loadWorkspace() {
   else query = query.in("id", ids);
   const { data, error } = await query.order("created_at", { ascending: true });
   if (error) throw error;
+  if (loadToken !== workspaceLoadToken || requestedRole !== role) return;
   wrestlers = data || [];
   const title = { parent: "Parent view", wrestler: "Athlete view", coach: "Coach view" }[role];
   const intro = {
@@ -219,10 +223,11 @@ async function loadWorkspace() {
   const picker = $("#athlete-picker");
   picker.replaceChildren(...wrestlers.map((wrestler) => { const option = document.createElement("option"); option.value = wrestler.id; option.textContent = wrestler.first_name || "Athlete"; return option; }));
   picker.value = selectedWrestler;
-  await loadRecords();
+  await loadRecords(loadToken);
 }
 
-async function loadRecords() {
+async function loadRecords(loadToken = workspaceLoadToken) {
+  const requestedRole = role;
   const athleteId = selectedWrestler;
   if (!athleteId) return;
   const [lessonResult, itemResult, assignmentResult, eventResult, initialReflectionResult, activeCoachResult] = await Promise.all([
@@ -234,6 +239,7 @@ async function loadRecords() {
     client.from("coach_assignments").select("coach_user_id").eq("wrestler_id", athleteId).is("revoked_at", null)
   ]);
   let reflectionResult = initialReflectionResult;
+  if (loadToken !== workspaceLoadToken || requestedRole !== role || athleteId !== selectedWrestler) return;
   if (isReflectionSharingMissing(reflectionResult.error)) {
     reflectionSharingAvailable = false;
     reflectionResult = await client.from("reflections").select("id,reflection_date,content,mood,audience,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false });
@@ -572,7 +578,22 @@ $("#signin-form").addEventListener("submit", (event) => {
 });
 
 $("#sign-out").addEventListener("click", () => run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; showSignedOut(); notice("You’re signed out.", "good"); }));
-$("#role-switch").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); role = $("#role-switch").value; selectedWrestler = ""; $("#parent-share-coach").checked = false; parentLessonDraft = null; $("#parent-draft-review").replaceChildren(); hide("#parent-draft-review"); await loadWorkspace(); if (role === "parent" && selectedWrestler) restoreParentCapture(selectedWrestler); }));
+$("#role-switch").addEventListener("change", () => run(async () => {
+  if (role === "parent") rememberParentCapture(selectedWrestler);
+  role = $("#role-switch").value;
+  selectedWrestler = "";
+  $("#parent-share-coach").checked = false;
+  parentLessonDraft = null;
+  $("#parent-draft-review").replaceChildren();
+  hide("#parent-draft-review");
+  hide("#author-panel"); hide("#feedback-panel"); hide(".content-grid"); hide("#athlete-picker-card"); hide("#connect-role-card"); hide(".privacy-note");
+  $("#role-summary").textContent = "";
+  $("#role-title").textContent = `${roleLabels(role)} view`;
+  $("#role-eyebrow").textContent = `${roleLabels(role).toUpperCase()} VIEW`;
+  notice(`Loading ${roleLabels(role)} view…`, "info");
+  await loadWorkspace();
+  if (role === "parent" && selectedWrestler) restoreParentCapture(selectedWrestler);
+}));
 $("#athlete-picker").addEventListener("change", () => run(async () => { if (role === "parent") rememberParentCapture(selectedWrestler); selectedWrestler = $("#athlete-picker").value; if (role === "parent") restoreParentCapture(selectedWrestler); hide("#invite-result"); await loadRecords(); }));
 
 $("#family-form").addEventListener("submit", (event) => {
