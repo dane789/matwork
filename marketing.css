@@ -140,5 +140,17 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 .reflection-chip>span{color:var(--mat-navy)}
 .reflection-chip p{color:#536176}
 .parent-card .role-icon{color:#52647a}
+
+/* Compact screens use a stable, easy-to-tap service list instead of a moving ticker. */
+@media(max-width:760px){
+  .eyebrow{font-size:11px;letter-spacing:1px}
+  .proof-strip{display:block;overflow:visible;white-space:normal;margin:0 12px 30px;padding:0;border:1px solid var(--mat-line);border-radius:12px;background:#fff;color:var(--mat-navy);font-size:12px}
+  .proof-track{display:block;width:auto;animation:none;transform:none}
+  .proof-items{display:grid;grid-template-columns:1fr;gap:0;padding:4px 14px}
+  .proof-items[aria-hidden=true]{display:none}
+  .proof-items i{display:none}
+  .proof-items a{display:flex;align-items:center;min-height:48px;padding:10px 4px;border-bottom:1px solid var(--mat-line);white-space:normal;font-size:12px;letter-spacing:.45px}
+  .proof-items a:last-child{border-bottom:0}
+}
 @media(min-width:651px) and (max-width:1200px){.site-header{height:auto;min-height:70px;padding:10px 20px;gap:10px 16px;flex-wrap:wrap}.site-header nav{order:3;flex:1 0 100%;justify-content:center;margin:0;padding:9px 0 2px;border-top:1px solid var(--mat-line)}.header-cta{margin-left:auto}}
 
