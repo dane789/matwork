@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101c1c">
   <meta name="description" content="A shared, role-aware workspace for wrestling families, athletes, and coaches.">
   <title>Matwork — Team workspace</title>
-  <link rel="stylesheet" href="shared.css?v=20261017-role-flow1">
+  <link rel="stylesheet" href="shared.css?v=20261017-athlete-access1">
   <script src="supabase-config.js"></script>
-  <script type="module" src="shared.js?v=20261017-capture-simple1"></script>
+  <script type="module" src="shared.js?v=20261017-athlete-access1"></script>
 </head>
 <body>
   <header class="shared-header">
@@ -21,8 +21,11 @@
 
     <section id="signin-panel" class="card sign-in-card" hidden>
       <div class="eyebrow">WELCOME TO MATWORK</div><h2>Sign in to Matwork</h2>
-      <p class="muted">Enter the email linked to your role and we’ll send a secure sign-in link. Parents use the family account email; athletes and coaches use the email that received their invitation. You’ll stay signed in on this browser until you sign out or your session expires.</p>
-      <form id="signin-form" class="form-stack"><label>Email address<input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="primary-button" type="submit">Send me a sign-in link</button></form>
+      <p class="muted">Choose the sign-in that matches your role. Your session stays on this browser until you sign out or it expires.</p>
+      <div class="signin-options">
+        <form id="signin-form" class="form-stack signin-option"><h3>Parent or Coach</h3><p class="fine-print">Use the email linked to your Matwork account. We’ll send a secure sign-in link.</p><label>Email address<input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><button class="primary-button" type="submit">Email me a sign-in link</button></form>
+        <form id="athlete-signin-form" class="form-stack signin-option"><h3>Athlete</h3><p class="fine-print">Use the Athlete code and PIN given to you by your parent. No email needed.</p><label>Athlete code<input id="athlete-login-code" autocomplete="username" autocapitalize="characters" spellcheck="false" required placeholder="Example: MW-7K4P9D2Q"></label><label>PIN<input id="athlete-login-pin" type="password" inputmode="numeric" pattern="[0-9]{8}" autocomplete="current-password" required placeholder="8-digit PIN"></label><button class="primary-button" type="submit">Sign in as Athlete</button></form>
+      </div>
     </section>
 
     <section id="onboarding-panel" class="card" hidden>
@@ -30,14 +33,14 @@
       <p class="muted">Choose the option that matches your role.</p>
       <div class="onboarding-grid">
         <form id="family-form" class="form-stack"><h3>I’m a parent</h3><p class="muted">Create your family space, then add an athlete.</p><label>Family label <input id="family-label" maxlength="80" value="My family"></label><button class="primary-button" type="submit">Create family space</button></form>
-        <form id="accept-invite-form" class="form-stack"><h3>I’m an athlete or coach</h3><p class="muted">Use the one-time code shared by a parent.</p><label>One-time code<input id="invite-code" autocomplete="off" maxlength="64" required placeholder="Paste your access code"></label><button class="secondary-button" type="submit">Join family space</button></form>
+        <form id="accept-invite-form" class="form-stack"><h3>I’m a coach or existing Athlete account</h3><p class="muted">Coaches use the one-time code from the family. New Athlete accounts sign in with their Athlete code and PIN.</p><label>One-time code<input id="invite-code" autocomplete="off" maxlength="64" required placeholder="Paste your access code"></label><button class="secondary-button" type="submit">Connect account</button></form>
       </div>
     </section>
 
     <section id="workspace-panel" hidden>
       <div class="workspace-toolbar card"><div><div class="eyebrow" id="role-eyebrow">YOUR VIEW</div><h2 id="role-title">Your progress</h2></div><div id="role-switch-wrap" hidden><label for="role-switch">View as</label><select id="role-switch"></select></div></div>
       <div id="athlete-setup" class="card" hidden><div class="eyebrow">FIRST ATHLETE</div><h2>Add an athlete profile</h2><p class="muted">Use a first name or a nickname. Keep birthdays, school names, locations, and schedules out of shared journal notes.</p><form id="wrestler-form" class="inline-form"><label>First name<input id="wrestler-first-name" maxlength="30" required placeholder="Athlete’s first name"></label><button class="primary-button" type="submit">Add athlete</button></form></div>
-      <div id="athlete-picker-card" class="card athlete-picker" hidden><label for="athlete-picker" class="eyebrow">ATHLETE PROFILE</label><select id="athlete-picker"></select><div id="invite-actions" class="invite-actions" hidden><button class="secondary-button" type="button" data-create-invite="wrestler">Create athlete access code</button><button class="secondary-button" type="button" data-create-invite="coach">Create coach access code</button><button id="add-athlete-toggle" class="secondary-button" type="button">Add another athlete</button></div><form id="add-athlete-form" class="inline-form" hidden><label for="new-athlete-name">Athlete first name or nickname<input id="new-athlete-name" maxlength="30" required placeholder="First name or nickname"></label><button class="primary-button" type="submit">Add athlete</button></form><div id="invite-result" class="invite-result" hidden></div></div>
+      <div id="athlete-picker-card" class="card athlete-picker" hidden><label for="athlete-picker" class="eyebrow">ATHLETE PROFILE</label><select id="athlete-picker"></select><div id="invite-actions" class="invite-actions" hidden><button class="secondary-button" type="button" id="athlete-access-toggle">Set up / reset Athlete access</button><button class="secondary-button" type="button" data-create-invite="coach">Create coach access code</button><button id="add-athlete-toggle" class="secondary-button" type="button">Add another athlete</button></div><form id="add-athlete-form" class="inline-form" hidden><label for="new-athlete-name">Athlete first name or nickname<input id="new-athlete-name" maxlength="30" required placeholder="First name or nickname"></label><button class="primary-button" type="submit">Add athlete</button></form><section id="athlete-access-setup" class="athlete-access-setup" hidden><h3>Create or reset Athlete sign-in</h3><p class="muted">Matwork creates a private Athlete code. Choose an 8-digit PIN and share both directly with your athlete. They can sign in without email. Resetting access replaces the old code and PIN, and replaces the current Athlete login for this profile. Parent and Coach access stay the same.</p><form id="athlete-access-form" class="form-stack"><label>Choose an 8-digit PIN<input id="athlete-pin-create" type="password" inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8" required autocomplete="new-password" placeholder="8 digits"></label><label>Confirm PIN<input id="athlete-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]{8}" minlength="8" maxlength="8" required autocomplete="new-password" placeholder="Enter it again"></label><button class="primary-button" type="submit">Create or reset sign-in</button></form></section><div id="invite-result" class="invite-result" hidden></div></div>
       <div id="role-summary" class="role-summary"></div>
       <div class="content-grid">
         <section class="card"><div class="card-heading"><div><div class="eyebrow">BUILD ON EACH SESSION</div><h3>Lesson notes</h3></div></div><div id="lesson-list" class="record-list"></div></section>
