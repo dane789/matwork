@@ -124,6 +124,11 @@ function roleLabels(available) {
   return { parent: "Parent", wrestler: "Athlete", coach: "Coach" }[available];
 }
 
+function coachDisplayLabel(name) {
+  const clean = String(name || "").trim();
+  return /^coach\b/i.test(clean) ? clean : `Coach ${clean}`;
+}
+
 async function loadIdentity() {
   if (!user) return showSignedOut();
   $("#account-label").textContent = user.email || "Signed in";
@@ -216,6 +221,7 @@ async function loadWorkspace() {
   if (!wrestlers.length) {
     $("#lesson-list").innerHTML = `<div class="empty-state">${role === "parent" ? "Add your first athlete profile to start the journal." : "No athlete profile is linked to this account yet. Ask a parent for an access code."}</div>`;
     $("#practice-list").innerHTML = "";
+    hide(".content-grid", false);
     if (role === "parent") hide("#athlete-setup", false);
     return;
   }
@@ -327,15 +333,22 @@ function updateCoachSharingCopy() {
     if (assignmentCopy) assignmentCopy.textContent = "No coach is connected yet. This recommendation and its check-ins will stay in the family workspace.";
   } else if (named !== count) {
     const missing = count - named;
-    const who = `${assignedCoachNames.map((name) => `Coach ${name}`).join(", ")}${named ? " and " : ""}${missing} coach${missing === 1 ? "" : "es"} without a display name`;
+    const who = `${assignedCoachNames.map(coachDisplayLabel).join(", ")}${named ? " and " : ""}${missing} coach${missing === 1 ? "" : "es"} without a display name`;
     const message = `${who} ${count === 1 ? "is" : "are"} assigned. Sharing stays off until each coach has a display name.`;
     if (parentCopy) parentCopy.textContent = message;
     if (assignmentCopy) assignmentCopy.textContent = message;
   } else {
-    const recipients = assignedCoachNames.map((name) => `Coach ${name}`).join(", ");
-    const all = count > 1 ? "all assigned coaches" : "the assigned coach";
-    if (parentCopy) parentCopy.textContent = `Share this recap and practice check-ins with ${all}: ${recipients}.`;
-    if (assignmentCopy) assignmentCopy.textContent = `Share this recommendation and its check-ins with ${all}: ${recipients}.`;
+    const recipients = assignedCoachNames.map(coachDisplayLabel).join(", ");
+    const selfAssigned = assignedCoachIds.includes(user?.id);
+    const coachTarget = count > 1 ? `assigned coaches (${recipients})` : recipients;
+    const parentMessage = selfAssigned && count === 1
+      ? "Show this recap and practice check-ins in your Coach view too? The assigned coach is you, using this account. No message is sent."
+      : `Let ${count === 1 ? "" : "the assigned coaches "}${coachTarget} see this recap and practice check-ins in Matwork.${selfAssigned ? " Your account is one of these coaches, so you’ll see it in Coach view too." : ""} No message is sent.`;
+    const assignmentMessage = selfAssigned && count === 1
+      ? "Show this recommendation and check-ins in your Coach view too? The assigned coach is you, using this account. No message is sent."
+      : `Let ${count === 1 ? "" : "the assigned coaches "}${coachTarget} see this recommendation and check-ins in Matwork.${selfAssigned ? " Your account is one of these coaches, so you’ll see it in Coach view too." : ""} No message is sent.`;
+    if (parentCopy) parentCopy.textContent = parentMessage;
+    if (assignmentCopy) assignmentCopy.textContent = assignmentMessage;
   }
   const disabled = !count || named !== count;
   if (parentInput) { parentInput.disabled = disabled; if (disabled) parentInput.checked = false; }
@@ -348,10 +361,11 @@ function configureReflectionForm() {
   if (!select) return;
   const count = assignedCoachIds.length;
   const hasNamedCoaches = count > 0 && assignedCoachNames.length === count;
-  const recipients = assignedCoachNames.map((name) => `Coach ${name}`).join(", ");
-  const coachTarget = count === 1 ? recipients : `all assigned coaches (${recipients})`;
+  const recipients = assignedCoachNames.map(coachDisplayLabel).join(", ");
+  const selfAssigned = assignedCoachIds.includes(user?.id);
+  const coachTarget = count === 1 ? (selfAssigned ? "your Coach view" : recipients) : `assigned coaches (${recipients})`;
   const options = role === "parent"
-    ? [["family", "Family only"], ...(hasNamedCoaches ? [["coach", `Share with ${coachTarget}`], ["both", `Share with athlete and ${coachTarget}`]] : [])]
+    ? [["family", "Family only"], ...(hasNamedCoaches ? [["coach", `Share in ${coachTarget}`], ["both", `Share with athlete and ${coachTarget}`]] : [])]
     : role === "wrestler"
       ? [["private", "Only me and my family"], ...(hasNamedCoaches ? [["coach", `Share with ${coachTarget}`]] : [])]
       : [];
@@ -360,7 +374,7 @@ function configureReflectionForm() {
   if (help) help.textContent = !count
     ? role === "parent" ? "No coach is connected. This check-in stays in your family workspace." : "No coach is connected. This check-in stays with you and your family."
     : !hasNamedCoaches ? "Coach sharing is unavailable until every assigned coach has a display name."
-    : `Coach sharing sends this check-in to ${coachTarget}.`;
+    : `This makes the check-in visible in ${coachTarget} inside Matwork; it does not send a message.`;
   hide("#reflection-compose", role === "coach" || !reflectionSharingAvailable);
   $("#reflection-title").textContent = role === "parent" ? "What are you noticing?" : "Your check-in";
   $("#reflection-prompt").textContent = role === "parent"
@@ -710,6 +724,38 @@ $("#coach-capture-form").addEventListener("submit", (event) => {
     notice("Draft ready. Review each section and choose which practice items to assign.", "good");
   });
 });
+
+$("#save-coach-note-without-ai").addEventListener("click", () => run(async () => {
+  if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned athlete in the Coach workspace first.");
+  if (coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so families can see who wrote the lesson.");
+  const note = $("#capture-note").value.trim();
+  if (note.length < 12) throw new Error("Add a little more detail before saving the lesson note.");
+  const date = $("#capture-date").value;
+  if (!date) throw new Error("Add the lesson date before saving.");
+  const firstLine = note.split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "Lesson notes";
+  const focus = firstLine.slice(0, 160);
+  const { data: lesson, error } = await client.from("lessons").insert({
+    wrestler_id: selectedWrestler,
+    lesson_number: $("#capture-number").value ? Number($("#capture-number").value) : null,
+    lesson_date: date,
+    focus,
+    instructor_label: "Coach",
+    created_by: user.id
+  }).select("id").single();
+  if (error) throw error;
+  const { error: itemError } = await client.from("lesson_items").insert({
+    lesson_id: lesson.id,
+    wrestler_id: selectedWrestler,
+    kind: "coach_observation",
+    content: note,
+    audience: ["coach", "wrestler"],
+    authored_by: user.id
+  });
+  if (itemError) throw itemError;
+  $("#capture-note").value = "";
+  notice("Lesson note saved without AI. Add practice steps separately if needed.", "good");
+  await loadRecords();
+}));
 
 $("#parent-note-form").addEventListener("submit", (event) => {
   event.preventDefault();
