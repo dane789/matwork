@@ -42,3 +42,21 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 .core-history-note{max-width:760px;margin:0 auto 28px;text-align:center;color:var(--mat-muted);font-size:16px;line-height:1.65}
 @media(max-width:760px){.core-history-note{margin:0 auto 24px;text-align:left;font-size:15px}}
 
+/* Readability pass: make supporting copy and controls comfortably legible. */
+.site-header nav a,.header-cta,.button,.text-link{font-size:13px}
+.early-note{font-size:12px;line-height:1.5;letter-spacing:.2px;color:#afc0b5}
+.eyebrow{font-size:10px;letter-spacing:1.3px}
+.proof-strip{font-size:12px;line-height:1.45;letter-spacing:.7px}
+.role-card p{font-size:13px;line-height:1.65;color:#5d6a61}
+.role-foot{font-size:10px;line-height:1.4;color:#637167}
+.loop-heading p{font-size:14px;line-height:1.7;color:#536258}
+.steps b{font-size:14px;line-height:1.45;color:#293c31}
+.steps p{font-size:14px;line-height:1.65;color:#526056}
+.value-copy p{font-size:14px;line-height:1.75;color:#526056}
+.privacy-section p{font-size:14px;line-height:1.7;color:#526056}
+.simple-card small{font-size:12px;color:#705519}
+@media(max-width:760px){
+  .site-header nav a,.header-cta{font-size:12px}
+  .role-card p,.steps p,.value-copy p,.privacy-section p{font-size:14px}
+}
+
