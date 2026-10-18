@@ -39,7 +39,7 @@ function renderLessonItem(item, coachName, coachSource) {
   const labelClass = item.kind.includes("parent") ? "parent" : item.kind.startsWith("coach") ? "coach" : "";
   if (!sections.length && !cues) return `<div class="record-label ${labelClass}">${label}</div><p>${esc(item.content)}</p>`;
   const sectionHtml = sections.map((section) => `<section class="recap-topic">${section.title ? `<h5>${esc(section.title)}</h5>` : ""}${section.objective ? `<div class="recap-section"><b>Objective</b><p>${esc(section.objective)}</p></div>` : ""}${section.list.length ? `<div class="recap-section"><b>Key coaching points</b><ul>${section.list.map((point) => `<li>${esc(point)}</li>`).join("")}</ul></div>` : ""}${section.takeaway ? `<div class="recap-takeaway"><b>Lesson takeaway</b><p>${esc(section.takeaway)}</p></div>` : ""}</section>`).join("");
-  return `<div class="record-label ${labelClass}">${label}</div><div class="lesson-recap">${sectionHtml}${cues ? `<details class="recap-cues"><summary>${coachSource ? "Coach cue wording" : "Coach wording reported in the parent notes"}</summary><p>${esc(cues)}</p></details>` : ""}</div>`;
+  return `<div class="record-label ${labelClass}">${label}</div><div class="lesson-recap">${sectionHtml}${cues ? `<details class="recap-cues"><summary>${coachSource ? "Coach’s words from the lesson" : "Coach’s words reported in parent notes"}</summary><p>${esc(cues)}</p></details>` : ""}</div>`;
 }
 const notice = (message, kind = "info") => { const node = $("#notice"); node.textContent = message; node.dataset.kind = kind; node.hidden = !message; };
 const hide = (selector, value = true) => { $(selector).hidden = value; };
