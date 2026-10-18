@@ -58,6 +58,8 @@ const parentCaptureByAthlete = new Map();
 let coachProfiles = new Map();
 let ownCoachProfile = null;
 let coachProfilesAvailable = true;
+let assignedCoachIds = [];
+let assignedCoachNames = [];
 let reflectionSharingAvailable = true;
 
 function isCoachProfilesMissing(error) {
@@ -220,12 +222,13 @@ async function loadWorkspace() {
 async function loadRecords() {
   const athleteId = selectedWrestler;
   if (!athleteId) return;
-  const [lessonResult, itemResult, assignmentResult, eventResult, initialReflectionResult] = await Promise.all([
+  const [lessonResult, itemResult, assignmentResult, eventResult, initialReflectionResult, activeCoachResult] = await Promise.all([
     client.from("lessons").select("id,lesson_number,lesson_date,focus,instructor_label,created_by").eq("wrestler_id", athleteId).order("lesson_date", { ascending: false }),
     client.from("lesson_items").select("id,lesson_id,wrestler_id,kind,content,audience,authored_by,created_at,ai_assisted").eq("wrestler_id", athleteId).order("created_at", { ascending: true }),
     client.from("practice_assignments").select("id,wrestler_id,lesson_id,title,instructions,source,coach_origin,share_with_coach,audience,due_date,active,created_at").eq("wrestler_id", athleteId).eq("active", true).order("created_at", { ascending: false }),
     client.from("checklist_events").select("assignment_id,completed,recorded_at,note").eq("wrestler_id", athleteId).order("recorded_at", { ascending: false }),
-    client.from("reflections").select("id,reflection_date,content,mood,audience,author_role,share_with_coach,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false })
+    client.from("reflections").select("id,reflection_date,content,mood,audience,author_role,share_with_coach,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false }),
+    client.from("coach_assignments").select("coach_user_id").eq("wrestler_id", athleteId).is("revoked_at", null)
   ]);
   let reflectionResult = initialReflectionResult;
   if (isReflectionSharingMissing(reflectionResult.error)) {
@@ -233,12 +236,13 @@ async function loadRecords() {
     reflectionResult = await client.from("reflections").select("id,reflection_date,content,mood,audience,created_by,created_at").eq("wrestler_id", athleteId).order("created_at", { ascending: false });
     configureReflectionForm();
   } else if (!reflectionResult.error) { reflectionSharingAvailable = true; configureReflectionForm(); }
-  const error = [lessonResult, itemResult, assignmentResult, eventResult, reflectionResult].find((result) => result.error)?.error;
+  const error = [lessonResult, itemResult, assignmentResult, eventResult, reflectionResult, activeCoachResult].find((result) => result.error)?.error;
   if (error) throw error;
   const lessons = lessonResult.data || [];
   const items = itemResult.data || [];
   const assignments = assignmentResult.data || [];
-  const authorIds = [...new Set([...lessons.map((row) => row.created_by), ...items.map((row) => row.authored_by), ...assignments.map((row) => row.created_by)].filter(Boolean))];
+  assignedCoachIds = [...new Set((activeCoachResult.data || []).map((row) => row.coach_user_id).filter(Boolean))];
+  const authorIds = [...new Set([...lessons.map((row) => row.created_by), ...items.map((row) => row.authored_by), ...assignments.map((row) => row.created_by), ...assignedCoachIds].filter(Boolean))];
   coachProfiles = new Map();
   if (authorIds.length && coachProfilesAvailable) {
     const { data: profiles, error: profileError } = await client.from("coach_profiles").select("user_id,display_name").in("user_id", authorIds);
@@ -248,6 +252,8 @@ async function loadRecords() {
       coachProfiles = new Map((profiles || []).map((profile) => [profile.user_id, profile.display_name]));
     }
   }
+  assignedCoachNames = assignedCoachIds.map((id) => coachProfiles.get(id)).filter(Boolean);
+  updateCoachSharingCopy();
   const latest = new Map();
   for (const event of eventResult.data || []) if (!latest.has(event.assignment_id)) latest.set(event.assignment_id, event);
   const visibleAssignments = assignments.filter((assignment) => role !== "wrestler" || assignment.audience === "wrestler");
@@ -294,6 +300,33 @@ async function loadRecords() {
   const coachCompleted = coachAssigned.filter((assignment) => latest.get(assignment.id)?.completed).length;
   const athlete = wrestlers.find((item) => item.id === athleteId);
   $("#role-summary").textContent = `${athlete?.first_name || "Athlete"} · ${introForRole()}${role === "coach" ? ` ${coachCompleted} of ${coachAssigned.length} coach-assigned items marked complete.` : role === "parent" ? ` ${completed} of ${assignments.length} practice items marked complete.` : ""}`;
+}
+
+function updateCoachSharingCopy() {
+  const count = assignedCoachIds.length;
+  const named = assignedCoachNames.length;
+  const parentInput = $("#parent-share-coach");
+  const parentCopy = $("#parent-share-coach-copy");
+  const assignmentInput = $("#assignment-share-coach-input");
+  const assignmentCopy = $("#assignment-share-coach-copy");
+  if (!count) {
+    if (parentCopy) parentCopy.textContent = "No coach is connected yet. This recap and its check-ins will stay in the family workspace.";
+    if (assignmentCopy) assignmentCopy.textContent = "No coach is connected yet. This recommendation and its check-ins will stay in the family workspace.";
+  } else if (named !== count) {
+    const missing = count - named;
+    const who = `${assignedCoachNames.map((name) => `Coach ${name}`).join(", ")}${named ? " and " : ""}${missing} coach${missing === 1 ? "" : "es"} without a display name`;
+    const message = `${who} ${count === 1 ? "is" : "are"} assigned. Sharing stays off until each coach has a display name.`;
+    if (parentCopy) parentCopy.textContent = message;
+    if (assignmentCopy) assignmentCopy.textContent = message;
+  } else {
+    const recipients = assignedCoachNames.map((name) => `Coach ${name}`).join(", ");
+    const all = count > 1 ? "all assigned coaches" : "the assigned coach";
+    if (parentCopy) parentCopy.textContent = `Share this recap and practice check-ins with ${all}: ${recipients}.`;
+    if (assignmentCopy) assignmentCopy.textContent = `Share this recommendation and its check-ins with ${all}: ${recipients}.`;
+  }
+  const disabled = !count || named !== count;
+  if (parentInput) { parentInput.disabled = disabled; if (disabled) parentInput.checked = false; }
+  if (assignmentInput) { assignmentInput.disabled = disabled; if (disabled) assignmentInput.checked = false; }
 }
 
 function configureReflectionForm() {
