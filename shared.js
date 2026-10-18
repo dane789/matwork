@@ -613,10 +613,20 @@ $("#athlete-signin-form").addEventListener("submit", (event) => {
     if (!/^\d{8}$/.test(pin)) throw new Error("Enter the 8-digit Athlete PIN from your parent.");
     const { data, error } = await client.functions.invoke("athlete-access", { body: { action: "login", code, pin } });
     if (error || !data?.access_token || !data?.refresh_token) throw new Error(data?.error || error?.message || "We couldn’t sign in with that code and PIN. Check them with your parent and try again.");
+    // Select the Athlete role before establishing the session. This matters if
+    // this browser was previously used by a parent or coach.
+    role = "wrestler";
+    selectedWrestler = "";
     const { error: sessionError } = await client.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
     if (sessionError) throw sessionError;
+    const { data: sessionData, error: sessionReadError } = await client.auth.getSession();
+    if (sessionReadError) throw sessionReadError;
+    session = sessionData.session;
+    user = session?.user || null;
+    if (!user) throw new Error("The Athlete session could not be started. Please try signing in again.");
+    await loadIdentity();
     $("#athlete-login-pin").value = "";
-    notice("You’re signed in to your Athlete workspace.", "good");
+    notice("Welcome to your Athlete view. Your practice steps and lesson history are ready.", "good");
   });
 });
 
