@@ -33,3 +33,17 @@ body{font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink)}
 /* Keep the account bar clear on narrow phones. */
 .brand>span:last-child{white-space:nowrap}.header-actions{min-width:0;gap:8px}.quiet-button{white-space:nowrap}@media(max-width:480px){.account-label{display:none}.quiet-button{min-width:72px;padding:8px 7px}.brand small{white-space:nowrap;letter-spacing:1.4px}}
 
+/* Keep supporting labels readable without overpowering the lesson content. */
+.account-label{font-size:12px}
+.shared-heading .eyebrow,.eyebrow{font-size:10px;color:#6d5420}
+.form-stack label,.inline-form label,.draft-review label{font-size:13px}
+.fine-print,.coach-profile-panel .muted{font-size:12px;line-height:1.6;color:#5b697a}
+.record-meta,.record-label{font-size:11px;line-height:1.45}
+.record-meta{color:#526174}
+.practice-copy small{font-size:12px;color:#58687c}
+.reflection-meta{font-size:11px;color:#58687c}
+.privacy-note{font-size:13px;color:#46566a}
+.shared-footer{font-size:11px}
+.workspace-toolbar #role-switch-wrap label,.secondary-tools summary{font-size:13px}
+.invite-actions button{font-size:12px}
+
