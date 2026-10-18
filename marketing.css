@@ -77,7 +77,7 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 /* Give the coach explainer the same visual hierarchy as the home page. */
 .simple-main{max-width:1210px;margin:0 auto;padding:30px clamp(16px,3vw,30px) 64px}
 .coach-intro{margin:0 0 24px;padding:clamp(28px,5vw,58px);border:1px solid #294363;border-radius:20px;background:linear-gradient(120deg,#12243d,#1b3656);box-shadow:0 16px 42px #13264018;color:#fff}
-.coach-intro>.eyebrow{color:#e3d29d}
+.coach-intro>.eyebrow{color:#d9e4ef}
 .coach-intro h1{max-width:850px;margin:16px 0 18px;color:#fff;font:650 clamp(38px,5.3vw,62px)/1.06 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-2px}
 .coach-intro .lead{max-width:760px;color:#e0e7ef;font-size:17px;line-height:1.65}
 .coach-intro .button{display:inline-flex;align-items:center;justify-content:center;gap:9px;margin-top:22px;background:#e3d29d;color:#172940}
@@ -97,15 +97,16 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 .coach-intro-actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
 .coach-intro .button{width:auto}
 .coach-text-link{margin-top:22px;color:#edf1f5;font-size:14px;text-underline-offset:4px}
-.coach-promise{display:flex;align-items:center;flex-wrap:wrap;gap:13px 18px;margin-top:35px;color:#e8d9a9;font-size:11px;font-weight:800;letter-spacing:.9px}
+.coach-promise{display:flex;align-items:center;flex-wrap:wrap;gap:13px 18px;margin-top:35px;color:#e1e9f1;font-size:11px;font-weight:800;letter-spacing:.9px}
 .coach-promise i{width:5px;height:5px;border-radius:50%;background:#e3d29d}
 .coach-section,.coach-roles{margin:0 auto 42px}
 .coach-section-heading{max-width:760px;margin:0 auto 24px;text-align:center}
+.coach-section-heading>.eyebrow,.coach-value-section .eyebrow{color:#52647a}
 .coach-section-heading h2,.coach-value-section h2,.coach-closing h2{margin:10px 0;color:var(--mat-navy);font-size:clamp(28px,4vw,42px);line-height:1.15;letter-spacing:-1.1px}
 .coach-section-heading>p,.coach-value-intro{color:#536176;font-size:16px;line-height:1.65}
 .coach-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
 .coach-step{min-width:0;padding:23px;border:1px solid var(--mat-line);border-radius:14px;background:#fff;box-shadow:0 8px 25px #1326400a}
-.coach-step>span{color:#705519;font-size:11px;font-weight:800;letter-spacing:.8px}
+.coach-step>span{color:#52647a;font-size:11px;font-weight:800;letter-spacing:.8px}
 .coach-step h3{margin:14px 0 8px;color:var(--mat-navy);font-size:21px;line-height:1.25}
 .coach-step p,.coach-benefits p,.simple-card p{color:#536176;font-size:14px;line-height:1.7}
 .coach-value-section{display:grid;grid-template-columns:.8fr 1.2fr;gap:42px;align-items:start;margin:0 0 48px;padding:34px;border:1px solid var(--mat-line);border-radius:17px;background:#fff}
@@ -118,11 +119,12 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 .coach-roles .coach-section-heading{margin-bottom:18px}
 .coach-roles .simple-grid{margin-bottom:18px}
 .coach-roles .simple-card{padding:21px}
+.coach-roles .simple-card small{color:#52647a;font-weight:750}
 .coach-roles .simple-card h3{margin:10px 0 7px;color:var(--mat-navy);font-size:19px;line-height:1.3}
 .coach-privacy{margin:0;padding:18px 20px;border-left:4px solid var(--mat-gold);border-radius:0 10px 10px 0;background:#f1eee4;color:#465467;font-size:14px;line-height:1.7}
 .coach-privacy b{color:var(--mat-navy)}
 .coach-closing{margin:0 0 34px;padding:38px 22px;border-radius:16px;background:var(--mat-navy);text-align:center;color:#fff}
-.coach-closing .eyebrow{color:#e3d29d}
+.coach-closing .eyebrow{color:#d9e4ef}
 .coach-closing h2{margin:9px 0;color:#fff}
 .coach-closing p{max-width:620px;margin:0 auto 19px;color:#d9e1ea;font-size:15px;line-height:1.65}
 .coach-closing .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#e3d29d;color:#172940}
