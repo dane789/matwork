@@ -66,3 +66,10 @@ body{font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink)}
 .recap-cues{border:1px solid #d5dde6;border-radius:8px;overflow:hidden}
 .recap-cues[open] summary{border:0;border-bottom:1px solid #d5dde6;border-radius:0;background:#f5f7fa}
 
+/* Keep gold for lines and controls, not text. */
+.brand-mark{color:#fff}
+.shared-heading .eyebrow,.eyebrow,.athlete-picker .eyebrow,.card-heading .eyebrow{color:#52647a}
+.shared-heading h1 span{color:#132640}
+.notice{color:#526174}
+.record-label.parent{color:#52647a}
+
