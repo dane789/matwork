@@ -1,0 +1,7 @@
+[functions.athlete-access]
+# The Athlete login endpoint must accept unauthenticated requests before it
+# can exchange a code and PIN for a Supabase Auth session. It performs its own
+# per-code attempt lockout; the setup action independently validates the
+# signed-in parent and athlete relationship.
+verify_jwt = false
+
