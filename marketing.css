@@ -60,3 +60,14 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
   .role-card p,.steps p,.value-copy p,.privacy-section p{font-size:14px}
 }
 
+/* Slow service ticker: keep labels separated and pause while someone reads. */
+.proof-strip{display:block;overflow:hidden;white-space:nowrap}
+.proof-track{display:flex;width:max-content;animation:proof-scroll 30s linear infinite}
+.proof-items{display:flex;flex:0 0 auto;align-items:center;gap:clamp(22px,4vw,52px);padding:0 clamp(22px,4vw,52px)}
+.proof-items span{flex:0 0 auto}
+.proof-items i{flex:0 0 5px}
+.proof-strip:hover .proof-track,.proof-strip:focus-within .proof-track{animation-play-state:paused}
+@keyframes proof-scroll{to{transform:translateX(-50%)}}
+@media(max-width:760px){.proof-strip{margin:0 12px 38px;padding:14px 0}.proof-items{gap:22px;padding:0 22px}}
+@media(prefers-reduced-motion:reduce){.proof-track{animation:none}.proof-strip{overflow-x:auto}.proof-items[aria-hidden=true]{display:none}}
+
