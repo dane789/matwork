@@ -71,3 +71,17 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 @media(max-width:760px){.proof-strip{margin:0 12px 38px;padding:14px 0}.proof-items{gap:22px;padding:0 22px}}
 @media(prefers-reduced-motion:reduce){.proof-track{animation:none}.proof-strip{overflow-x:auto}.proof-items[aria-hidden=true]{display:none}}
 
+/* Give the coach explainer the same visual hierarchy as the home page. */
+.simple-main{max-width:1210px;margin:0 auto;padding:30px clamp(16px,3vw,30px) 64px}
+.coach-intro{margin:0 0 24px;padding:clamp(28px,5vw,58px);border:1px solid #294363;border-radius:20px;background:linear-gradient(120deg,#12243d,#1b3656);box-shadow:0 16px 42px #13264018;color:#fff}
+.coach-intro>.eyebrow{color:#e3d29d}
+.coach-intro h1{max-width:850px;margin:16px 0 18px;color:#fff;font:650 clamp(38px,5.3vw,62px)/1.06 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-2px}
+.coach-intro .lead{max-width:760px;color:#e0e7ef;font-size:17px;line-height:1.65}
+.coach-intro .button{display:inline-flex;align-items:center;justify-content:center;gap:9px;margin-top:22px;background:#e3d29d;color:#172940}
+.simple-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 24px}
+.simple-card{min-width:0;padding:24px;background:#fff}
+.simple-card h2{line-height:1.25}
+.simple-card p{line-height:1.7}
+@media(max-width:900px){.site-header{padding:0 18px;gap:14px}.site-header nav{gap:14px}.site-header nav a{font-size:12px}.header-cta{padding:0 12px;font-size:12px}.simple-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.simple-main{padding:16px 14px 40px}.coach-intro{padding:27px 21px;border-radius:16px}.coach-intro h1{font-size:clamp(36px,10vw,48px);letter-spacing:-1.6px}.coach-intro .lead{font-size:15px;line-height:1.6}.coach-intro .button{width:100%}.simple-grid{grid-template-columns:1fr;gap:11px}.simple-card{padding:20px}}
+
