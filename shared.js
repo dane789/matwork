@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 15930)
-Total output lines: 943
-
 const $ = (selector) => document.querySelector(selector);
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const shortDate = (value) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Date not set";
@@ -437,7 +434,34 @@ $("#coach-profile-form").addEventListener("submit", (event) => {
   run(async () => {
     if (role !== "coach" || !user) throw new Error("Sign in with an assigned coach account to set this name.");
     if (!coachProfilesAvailable) throw new Error("Coach name attribution is waiting for a database update.");
-    const displayName = $("#coach-display-…930 tokens truncated…, () => run(async () => saveApprovedDraft(tasks)));
+    const displayName = $("#coach-display-name").value.trim();
+    if (!displayName) throw new Error("Enter the name you want families to see.");
+    const { data, error } = await client.from("coach_profiles").upsert({ user_id: user.id, display_name: displayName }, { onConflict: "user_id" }).select("user_id,display_name").single();
+    if (error) throw error;
+    ownCoachProfile = data;
+    notice("Coach name saved. It will appear with your notes and assignments.", "good");
+    if (selectedWrestler) await loadRecords();
+  });
+});
+
+function introForRole() { return { parent: "Full family record.", wrestler: "Your work, one step at a time.", coach: "Assigned coaching view." }[role]; }
+
+function draftField(label, key, value, rows = 3) {
+  return `<label>${esc(label)}<textarea data-draft-field="${esc(key)}" rows="${rows}">${esc(value || "")}</textarea></label>`;
+}
+
+function renderDraftReview(draft) {
+  lessonDraft = draft;
+  const originalTasks = (draft.coach_assigned_tasks || []).map((item) => ({ ...item, selected: true, origin: "Coach assignment captured" }));
+  const suggestedTasks = (draft.practice_suggestions || []).map((item) => ({ ...item, selected: false, origin: "AI suggestion — select only if you want to assign it" }));
+  const tasks = [...originalTasks, ...suggestedTasks];
+  const taskHtml = tasks.length ? tasks.map((task, index) => `<label class="draft-task"><input type="checkbox" data-task-selected="${index}" ${task.selected ? "checked" : ""}><span><b>${esc(task.origin)}</b><input type="text" data-task-title="${index}" maxlength="140" value="${esc(task.title || "")}" aria-label="Practice item title"><textarea data-task-instructions="${index}" rows="2" aria-label="Practice item instructions">${esc(task.instructions || "")}</textarea><select data-task-audience="${index}" aria-label="Practice item audience"><option value="wrestler" ${task.audience !== "parent" ? "selected" : ""}>Athlete</option><option value="parent" ${task.audience === "parent" ? "selected" : ""}>Parent</option></select></span></label>`).join("") : `<p class="muted">No assignments or suggestions were found in the note. You can add one in the existing practice form below.</p>`;
+  const questions = draft.clarification_questions?.length ? `<div class="record-label">CHECK BEFORE SHARING</div><ul>${draft.clarification_questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : "";
+  const node = $("#draft-review");
+  node.innerHTML = `<h4>Quick review before sharing</h4><p class="muted">Check the short lesson recap and practice steps. Nothing is saved or shared until you approve. AI suggestions stay separate from work stated in your note.</p>${draftField("Lesson focus", "focus", draft.focus, 2)}${draftField("Parent lesson recap · edit as needed", "parent_recap", serializeLessonSections(draft.lesson_sections), 9)}${draftField("Coach’s words or instructions from the note", "coach_cues", draft.coach_cues)}${draftField("Observations and development priorities from the note", "observations", draft.observations)}${draftField("Athlete focus", "wrestler_focus", draft.wrestler_focus)}${draftField("Parent support", "parent_support", draft.parent_support)}${draftField("Possible next lesson topics", "follow_up_topics", draft.follow_up_topics)}<h4>Practice checklist</h4>${taskHtml}${questions}<div class="draft-actions"><button type="button" class="primary-button" id="approve-draft">Approve and share plan</button><button type="button" class="secondary-button" id="discard-draft">Discard draft</button></div>`;
+  node.hidden = false;
+  node.querySelector("#discard-draft").addEventListener("click", () => { lessonDraft = null; node.replaceChildren(); node.hidden = true; });
+  node.querySelector("#approve-draft").addEventListener("click", () => run(async () => saveApprovedDraft(tasks)));
 }
 
 async function saveApprovedDraft(tasks) {
