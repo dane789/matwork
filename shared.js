@@ -201,6 +201,8 @@ async function loadWorkspace() {
   hide("#assignment-share-coach", role !== "parent");
   if (!$("#parent-capture-date").value) $("#parent-capture-date").value = new Date().toISOString().slice(0, 10);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
+  hide("#add-athlete-form", role !== "parent" || wrestlers.length === 0);
+  hide("#add-athlete-toggle", role !== "parent" || wrestlers.length === 0);
   $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
   $("#author-title").textContent = role === "coach" ? "Add lesson notes" : "Build the next plan";
   $("#author-summary").textContent = role === "coach"
@@ -589,6 +591,30 @@ $("#wrestler-form").addEventListener("submit", (event) => {
     $("#wrestler-first-name").value = "";
     selectedWrestler = data;
     notice("Athlete profile added.", "good");
+    await loadWorkspace();
+  });
+});
+
+$("#add-athlete-toggle").addEventListener("click", () => {
+  hide("#add-athlete-form", false);
+  hide("#add-athlete-toggle");
+  $("#new-athlete-name").focus();
+});
+
+$("#add-athlete-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(async () => {
+    const familyId = memberships.find((item) => item.role === "parent")?.family_id;
+    if (!familyId) throw new Error("Create the parent workspace first.");
+    const firstName = $("#new-athlete-name").value.trim();
+    if (!firstName) throw new Error("Add a first name or nickname.");
+    const { data, error } = await client.rpc("create_wrestler", { target_family: familyId, wrestler_first_name: firstName });
+    if (error) throw error;
+    selectedWrestler = data;
+    $("#new-athlete-name").value = "";
+    hide("#add-athlete-form");
+    hide("#add-athlete-toggle", false);
+    notice("Athlete profile added and selected.", "good");
     await loadWorkspace();
   });
 });
