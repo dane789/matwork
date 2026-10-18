@@ -54,6 +54,29 @@ body{font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink)}
 .share-choice span,#assignment-share-coach span{display:block;min-width:0}
 .share-choice input:disabled,#assignment-share-coach input:disabled{opacity:.55;cursor:not-allowed}
 
+/* Role-first order: review the existing work before adding to it. */
+#workspace-panel{gap:0}
+#workspace-panel>.workspace-toolbar{order:0}
+#workspace-panel>.role-summary{order:1}
+#workspace-panel>#athlete-picker-card{order:2}
+#workspace-panel>.content-grid{order:3}
+#workspace-panel>.feedback-grid{order:4}
+#workspace-panel>.author-panel{order:5}
+#workspace-panel>.access-code-card{order:6}
+#workspace-panel>.privacy-note{order:7}
+
+/* Athlete checklist rows are forgiving touch targets, not tiny checkbox hunts. */
+.practice-row{display:flex;align-items:flex-start;text-decoration:none;color:inherit;cursor:default}
+.practice-row.can-check{cursor:pointer;border-radius:9px;transition:background-color .15s ease}
+.practice-row.can-check:hover{background:#f7f8fa}
+.practice-row.can-check:focus-within{outline:3px solid #aab8c9;outline-offset:2px}
+.practice-row input[type=checkbox]{flex:0 0 24px;width:24px;height:24px;margin:1px 0 0;accent-color:#1c3658}
+.practice-row.read-only input{cursor:default}
+.practice-copy{display:grid;gap:5px;min-width:0}
+.practice-copy small{font-size:12px;line-height:1.5;color:#58687c}
+.practice-instructions{font-size:13px;line-height:1.6;color:#667486;white-space:pre-line}
+.practice-row.done .practice-copy b{text-decoration:line-through;color:#8993a0}
+
 /* Expandable rows: clearly signal that tapping opens more content. */
 .secondary-tools summary,.recap-cues summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:11px 13px;border:1px solid #d5dde6;border-radius:8px;background:#fff;color:#132640;line-height:1.4;list-style:none}
 .secondary-tools summary::-webkit-details-marker,.recap-cues summary::-webkit-details-marker{display:none}
