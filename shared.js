@@ -201,7 +201,7 @@ async function loadWorkspace() {
   hide("#assignment-share-coach", role !== "parent");
   if (!$("#parent-capture-date").value) $("#parent-capture-date").value = new Date().toISOString().slice(0, 10);
   hide("#invite-actions", role !== "parent" || wrestlers.length === 0);
-  hide("#add-athlete-form", role !== "parent" || wrestlers.length === 0);
+  hide("#add-athlete-form");
   hide("#add-athlete-toggle", role !== "parent" || wrestlers.length === 0);
   $("#author-eyebrow").textContent = role === "coach" ? "COACH WORKSPACE" : "FAMILY SUPPORT";
   $("#author-title").textContent = role === "coach" ? "Add lesson notes" : "Build the next plan";
