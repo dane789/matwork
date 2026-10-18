@@ -36,3 +36,7 @@ Repository: [dane789/matwork](https://github.com/dane789/matwork)
 Public home: [dane789.github.io/matwork](https://dane789.github.io/matwork/)  
 Shared workspace: [dane789.github.io/matwork/shared.html](https://dane789.github.io/matwork/shared.html)
 
+## Front-end architecture
+
+The public and shared experiences are static HTML, CSS, and JavaScript served from GitHub Pages. Supabase provides authentication, private data, and the optional lesson-draft service. The current stack can support Matwork’s core roles without React. If the role-specific views and shared interactions become costly to maintain, move incrementally to smaller UI/data modules or a React + Vite static build while keeping Supabase as the service layer.
+
