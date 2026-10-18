@@ -327,23 +327,33 @@ function updateCoachSharingCopy() {
   const disabled = !count || named !== count;
   if (parentInput) { parentInput.disabled = disabled; if (disabled) parentInput.checked = false; }
   if (assignmentInput) { assignmentInput.disabled = disabled; if (disabled) assignmentInput.checked = false; }
+  configureReflectionForm();
 }
 
 function configureReflectionForm() {
   const select = $("#reflection-sharing");
   if (!select) return;
+  const count = assignedCoachIds.length;
+  const hasNamedCoaches = count > 0 && assignedCoachNames.length === count;
+  const recipients = assignedCoachNames.map((name) => `Coach ${name}`).join(", ");
+  const coachTarget = count === 1 ? recipients : `all assigned coaches (${recipients})`;
   const options = role === "parent"
-    ? [["family", "Family only"], ["coach", "Share with coach"], ["both", "Share with athlete and coach"]]
+    ? [["family", "Family only"], ...(hasNamedCoaches ? [["coach", `Share with ${coachTarget}`], ["both", `Share with athlete and ${coachTarget}`]] : [])]
     : role === "wrestler"
-      ? [["private", "Only me and my family"], ["coach", "Share with coach"]]
+      ? [["private", "Only me and my family"], ...(hasNamedCoaches ? [["coach", `Share with ${coachTarget}`]] : [])]
       : [];
   select.replaceChildren(...options.map(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; return option; }));
+  const help = $("#reflection-sharing-help");
+  if (help) help.textContent = !count
+    ? role === "parent" ? "No coach is connected. This check-in stays in your family workspace." : "No coach is connected. This check-in stays with you and your family."
+    : !hasNamedCoaches ? "Coach sharing is unavailable until every assigned coach has a display name."
+    : `Coach sharing sends this check-in to ${coachTarget}.`;
   hide("#reflection-compose", role === "coach" || !reflectionSharingAvailable);
   $("#reflection-title").textContent = role === "parent" ? "What are you noticing?" : "Your check-in";
   $("#reflection-prompt").textContent = role === "parent"
-    ? "Share what you are seeing, what you hope to reinforce, or what would help the coach plan. Keep coaching cues and your own perspective clearly separate."
+    ? "What have you noticed since the last lesson? What would you like the coach to know before the next one? This is your perspective; the coach’s lesson notes stay separate."
     : "What went well? What felt hard? What do you want to work on next? Short answers are fine.";
-  $("#reflection-content-label").firstChild.textContent = role === "parent" ? "Your perspective for the support team" : "What would you like your support team to know?";
+  $("#reflection-content-label").firstChild.textContent = role === "parent" ? "Your observations" : "What would you like your support team to know?";
   hide("#reflection-mood-label", role !== "wrestler");
   if (!$("#reflection-date").value) $("#reflection-date").value = new Date().toISOString().slice(0, 10);
 }
