@@ -30,3 +30,8 @@ body{background:var(--mat-paper);color:var(--mat-ink);font-family:Inter,ui-sans-
 
 .core-step .core-num{display:block;margin:0 0 12px;color:#8b7440;font-size:10px;font-weight:800;letter-spacing:1.2px}.core-step>b{display:block;margin:0 0 8px;line-height:1.3}
 
+@media(max-width:1050px){.core-loop{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.section-heading .eyebrow,.simple-main>.eyebrow,.core-step .core-num{color:#6d5420}
+
+
