@@ -89,7 +89,14 @@ function configReady() {
 
 function setBusy(value) {
   busy = value;
-  document.querySelectorAll("button[type=submit]").forEach((button) => { button.disabled = value; });
+  document.querySelectorAll("button[type=submit], #save-coach-note-without-ai, #save-parent-notes-only").forEach((button) => { button.disabled = value; });
+}
+
+function readPracticeSteps(selector) {
+  const steps = $(selector).value.split(/\r?\n/).map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter(Boolean);
+  if (steps.length > 20) throw new Error("Add up to 20 practice steps, one per line.");
+  if (steps.some((step) => step.length > 140)) throw new Error("Keep each practice step under 140 characters so it is easy to check off.");
+  return steps;
 }
 
 function rememberParentCapture(wrestlerId) {
@@ -699,22 +706,30 @@ $("#coach-capture-form").addEventListener("submit", (event) => {
     if (role !== "coach" || !selectedWrestler) throw new Error("Select an assigned athlete in the Coach workspace first.");
     if (coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so families can see who wrote the lesson.");
     const note = $("#capture-note").value.trim();
+    const practiceSteps = $("#capture-practice-steps").value.trim();
+    const fullNote = [note, practiceSteps ? `COACH-ASSIGNED PRACTICE STEPS:\n${practiceSteps}` : ""].filter(Boolean).join("\n\n");
     if (note.length < 12) throw new Error("Add a little more detail before organizing the note.");
+    if (fullNote.length > 12000) throw new Error("Keep the lesson note and practice steps under 12,000 characters combined.");
     let data;
     try {
-      const response = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: note, source_role: "coach" } });
+      const response = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: fullNote, source_role: "coach" } });
       if (response.error) throw response.error;
       data = response.data;
     } catch (error) {
       if (error?.context && typeof error.context.json === "function") {
         try {
           const detail = await error.context.json();
-          if (detail?.error) { notice(detail.error, "bad"); return; }
+          if (detail?.error) {
+            notice(/credit_balance_exhausted/i.test(detail.error)
+              ? "AI organizing is unavailable because the API credit balance is empty. Your note is still here; choose “Save lesson and checklist” to use Matwork without AI."
+              : detail.error, /credit_balance_exhausted|monthly AI draft allowance/i.test(detail.error) ? "info" : "bad");
+            return;
+          }
         } catch { /* Fall through to the general function error below. */ }
       }
       const details = `${error?.message || ""} ${error?.name || ""}`;
       if (/functionsfetcherror|failed to fetch|not found|404|503/i.test(details)) {
-        notice("The secure lesson organizer is still being connected. Your note remains in this box and has not been saved. You can use the lesson form below for now.", "info");
+        notice("The organizer is unavailable. Your note is still here; choose “Save lesson and checklist” to save it without AI.", "info");
         return;
       }
       throw error;
@@ -730,6 +745,7 @@ $("#save-coach-note-without-ai").addEventListener("click", () => run(async () =>
   if (coachProfilesAvailable && !ownCoachProfile?.display_name) throw new Error("Save your coach display name first so families can see who wrote the lesson.");
   const note = $("#capture-note").value.trim();
   if (note.length < 12) throw new Error("Add a little more detail before saving the lesson note.");
+  const practiceSteps = readPracticeSteps("#capture-practice-steps");
   const date = $("#capture-date").value;
   if (!date) throw new Error("Add the lesson date before saving.");
   const firstLine = note.split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "Lesson notes";
@@ -748,12 +764,20 @@ $("#save-coach-note-without-ai").addEventListener("click", () => run(async () =>
     wrestler_id: selectedWrestler,
     kind: "coach_observation",
     content: note,
-    audience: ["coach", "wrestler"],
+    audience: ["coach", "parent", "wrestler"],
     authored_by: user.id
   });
   if (itemError) throw itemError;
+  if (practiceSteps.length) {
+    const { error: assignmentError } = await client.from("practice_assignments").insert(practiceSteps.map((title) => ({
+      wrestler_id: selectedWrestler, lesson_id: lesson.id, title, instructions: "", source: "coach", audience: "wrestler", created_by: user.id, coach_origin: "coach_stated", share_with_coach: false
+    })));
+    if (assignmentError) throw assignmentError;
+  }
   $("#capture-note").value = "";
-  notice("Lesson note saved without AI. Add practice steps separately if needed.", "good");
+  $("#capture-practice-steps").value = "";
+  $("#capture-number").value = "";
+  notice(practiceSteps.length ? `Lesson and ${practiceSteps.length} athlete practice ${practiceSteps.length === 1 ? "step" : "steps"} saved. The athlete can check them off; you can review progress here.` : "Lesson note saved. Add practice steps any time if the athlete has work to check off.", "good");
   await loadRecords();
 }));
 
@@ -763,8 +787,10 @@ $("#parent-note-form").addEventListener("submit", (event) => {
     if (role !== "parent" || !selectedWrestler) throw new Error("Select an athlete in the Parent dashboard first.");
     const coachNotes = $("#parent-coach-notes").value.trim();
     const parentNotes = $("#parent-observations").value.trim();
-    const source = [coachNotes ? `COACH NOTES (provided by parent):\n${coachNotes}` : "", parentNotes ? `PARENT OBSERVATIONS:\n${parentNotes}` : ""].filter(Boolean).join("\n\n");
+    const parentSteps = $("#parent-practice-steps").value.trim();
+    const source = [coachNotes ? `COACH NOTES (provided by parent):\n${coachNotes}` : "", parentNotes ? `PARENT OBSERVATIONS:\n${parentNotes}` : "", parentSteps ? `PARENT-PROPOSED PRACTICE STEPS (recommendations, not coach assignments):\n${parentSteps}` : ""].filter(Boolean).join("\n\n");
     if (source.length < 12) throw new Error("Add a little more detail before organizing the notes.");
+    if (source.length > 12000) throw new Error("Keep the lesson notes and practice steps under 12,000 characters combined.");
     let data;
     try {
       const response = await client.functions.invoke("coach-session-draft", { body: { wrestler_id: selectedWrestler, coach_note: source, source_role: "parent" } });
@@ -772,11 +798,16 @@ $("#parent-note-form").addEventListener("submit", (event) => {
       data = response.data;
     } catch (error) {
       if (error?.context && typeof error.context.json === "function") {
-        try { const detail = await error.context.json(); if (detail?.error) { notice(detail.error, "bad"); return; } } catch { /* Use the general function message below. */ }
+        try { const detail = await error.context.json(); if (detail?.error) {
+          notice(/credit_balance_exhausted/i.test(detail.error)
+            ? "AI organizing is unavailable because the API credit balance is empty. Your notes are still here; choose “Save notes and steps” to use Matwork without AI."
+            : detail.error, /credit_balance_exhausted|monthly AI draft allowance/i.test(detail.error) ? "info" : "bad");
+          return;
+        } } catch { /* Use the general function message below. */ }
       }
       const details = `${error?.message || ""} ${error?.name || ""}`;
       if (/functionsfetcherror|failed to fetch|not found|404|503/i.test(details)) {
-        notice("Parent AI planning is still being connected. Your notes remain in these boxes. You can save a parent note without AI below.", "info");
+        notice("The organizer is unavailable. Your notes are still here; choose “Save notes and steps” to save them without AI.", "info");
         return;
       }
       throw error;
@@ -786,6 +817,48 @@ $("#parent-note-form").addEventListener("submit", (event) => {
     notice("Draft action plan ready. Review the recap and choose any parent-recommended steps to include.", "good");
   });
 });
+
+$("#save-parent-notes-only").addEventListener("click", () => run(async () => {
+  if (role !== "parent" || !selectedWrestler) throw new Error("Select an athlete in the Parent view first.");
+  const coachNotes = $("#parent-coach-notes").value.trim();
+  const parentNotes = $("#parent-observations").value.trim();
+  if (coachNotes.length + parentNotes.length < 12) throw new Error("Add a few lesson notes or observations before saving.");
+  if (!$("#parent-capture-date").value) throw new Error("Add the lesson date before saving.");
+  const practiceSteps = readPracticeSteps("#parent-practice-steps");
+  const firstLine = (coachNotes || parentNotes).split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "Parent lesson notes";
+  const shareWithCoach = $("#parent-share-coach").checked;
+  const audience = shareWithCoach ? ["parent", "coach"] : ["parent"];
+  const { data: lesson, error } = await client.from("lessons").insert({
+    wrestler_id: selectedWrestler,
+    lesson_number: $("#parent-capture-number").value ? Number($("#parent-capture-number").value) : null,
+    lesson_date: $("#parent-capture-date").value,
+    focus: firstLine.slice(0, 160),
+    created_by: user.id
+  }).select("id").single();
+  if (error) throw error;
+  const rows = [
+    coachNotes ? { lesson_id: lesson.id, wrestler_id: selectedWrestler, kind: "parent_interpretation", content: `Coach notes reported by parent:\n${coachNotes}`, audience, authored_by: user.id } : null,
+    parentNotes ? { lesson_id: lesson.id, wrestler_id: selectedWrestler, kind: "parent_interpretation", content: `Parent observations:\n${parentNotes}`, audience, authored_by: user.id } : null
+  ].filter(Boolean);
+  if (rows.length) {
+    const { error: itemError } = await client.from("lesson_items").insert(rows);
+    if (itemError) throw itemError;
+  }
+  if (practiceSteps.length) {
+    const { error: assignmentError } = await client.from("practice_assignments").insert(practiceSteps.map((title) => ({
+      wrestler_id: selectedWrestler, lesson_id: lesson.id, title, instructions: "", source: "parent", audience: "wrestler", created_by: user.id, coach_origin: "parent_suggestion", share_with_coach: shareWithCoach
+    })));
+    if (assignmentError) throw assignmentError;
+  }
+  parentCaptureByAthlete.delete(selectedWrestler);
+  $("#parent-coach-notes").value = "";
+  $("#parent-observations").value = "";
+  $("#parent-practice-steps").value = "";
+  $("#parent-capture-number").value = "";
+  $("#parent-share-coach").checked = false;
+  notice(`Parent notes saved${shareWithCoach ? " for the family and shared coach" : " for the family"}${practiceSteps.length ? ` with ${practiceSteps.length} parent ${practiceSteps.length === 1 ? "recommendation" : "recommendations"} added to the athlete checklist` : ""}. No AI was used.`, "good");
+  await loadRecords();
+}));
 
 $("#assignment-form").addEventListener("submit", (event) => {
   event.preventDefault();
