@@ -47,3 +47,8 @@ body{font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink)}
 .workspace-toolbar #role-switch-wrap label,.secondary-tools summary{font-size:13px}
 .invite-actions button{font-size:12px}
 
+.ai-privacy-callout{padding:13px 15px;border-left:4px solid #b49a59;border-radius:0 8px 8px 0;background:#f5f1e7;color:#24344a;font-size:13px;line-height:1.55}
+.ai-privacy-callout b{color:#132640}
+.share-choice span,#assignment-share-coach span{display:block;min-width:0}
+.share-choice input:disabled,#assignment-share-coach input:disabled{opacity:.55;cursor:not-allowed}
+
